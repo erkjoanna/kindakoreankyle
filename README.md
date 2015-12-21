@@ -1,7 +1,7 @@
-# kindakoreankyle
+## kindakoreankyle
 MASLAB 2016 Team 1 repo.
 
-## Team Members
+#### Team Members
 * Julia Huang
 * Kristina Kim
 * Eurah Ko
