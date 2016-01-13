@@ -26,17 +26,12 @@ def voltage_to_distance(short_ir_v, long_ir_v):
 Returns distance given Short IR Sensor's voltage reading
 '''
 def short_ir_distance(v):
-	# short_equation = 
-	# inv_voltage = 0.07833 * distance + 0.01075
+	# inv_voltage = 0.00565114114 * distance -0.008073087974
 	inv_voltage = 1/v
-	distance = (inv_voltage - 0.01075) / 0.07833
+	distance = (inv_voltage - 0.008073087974) / 0.00565114114
 
-	# Falloff
-	# inv_voltage = -0.1493163578 * distance + 0.7354822746
-	# distance = (inv_voltage - 0.7354822746) / (-0.1493163578)
-
-	# Inverse Voltages less than 0.26012 are not accurate
-	if inv_voltage < 0.26012:
+	# Inverse Voltages less than 0.0088 are not accurate
+	if inv_voltage < 0.0088:
 		return -1
 	else:
 		return distance

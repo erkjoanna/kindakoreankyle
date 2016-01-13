@@ -1,12 +1,11 @@
 from tamproxy import Sketch, SyncedSketch, Timer
 from tamproxy.devices import AnalogInput
 from voltage_distance_converter import *
-
-# Detects changes in allllll the pins!
+import numpy as np
 
 class AnalogRead(SyncedSketch):
 
-    adc_pin = 11
+    adc_pin = 13
 
     def setup(self):
         self.testpin = AnalogInput(self.tamp, self.adc_pin)
@@ -15,7 +14,7 @@ class AnalogRead(SyncedSketch):
     def loop(self):
         if self.timer.millis() > 100:
             self.timer.reset()
-            print self.testpin.val, self.testpin.val/1000.0, long_ir_distance(self.testpin.val/1000.0)
+            print self.testpin.val/1000.0, "short ir reading: ", short_ir_distance(self.testpin.val/1000.0)
 
 if __name__ == "__main__":
     sketch = AnalogRead(1, -0.00001, 100)
