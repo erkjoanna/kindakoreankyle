@@ -34,7 +34,6 @@ class GyroSquare (SyncedSketch):
             print self.gyro.val, self.gyro.status
 
         '''
-
         #take a snapshot of the current gyro number
         peek = self.gyro.val
         print "peek: ",peek #check
@@ -42,20 +41,20 @@ class GyroSquare (SyncedSketch):
         ninetydegrees =  30
 
         #while the robot hasn't turned 90 degrees yet
-        while (self.gyro.val-peek) < ninetydegrees:
-            print "difference: ",self.gyro.val-peek #check to see if this works lol, value should increase
+        while ((self.gyro.val)-peek) < ninetydegrees:
+	    if self.timer.millis()>100:
+                self.timer.reset()
+	    	print peek, "difference: ",(self.gyro.val)-peek, "raw: ",self.gyro.val
+ #check to see if this works lol, value should increase
+        
+	#move the robot forward for a second - THIS DOESN'T QUITE WORK YET
+        while self.timer.millis()<2000:
+	    x = 1 
+        self.motor1.write(1,50)
+        self.motor2.write(0,50)     	    
+        self.timer.reset()
+        print "In if loop."  
 
-            #turn 90 degrees (I hope)
-            #both 1 is increasing value
-            self.motor1.write(1,50)
-            self.motor2.write(1,50)
-
-        #move the robot forward for a second
-        if self.timer.millis()> 1000:
-            self.timer.reset()
-            self.motor1.write(1,100)
-            self.motor2.write(0,100)
-                    
 if __name__ == "__main__":
     sketch = GyroSquare(3,-0.00001, 100)
     sketch.run()
