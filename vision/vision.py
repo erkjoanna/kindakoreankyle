@@ -111,7 +111,7 @@ res_green = cv2.bitwise_and(img, img, mask= mask_green)
 
 print "Writing red image..."
 cv2.imwrite("mask_red2.png", mask_red)
-print mask_red, mask_red.shape, mask_red[89][159]
+print mask_red, mask_red.shape, mask_red.dtype
 cv2.imwrite("red_image2.png", res_red)
 
 res_red2 = cv2.imread("red_image2.png")

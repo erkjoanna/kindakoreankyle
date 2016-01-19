@@ -1,4 +1,4 @@
-import cv2, cv
+import cv2
 import numpy as np
 import scipy.misc
 import time 
@@ -39,12 +39,9 @@ img = cv2.imread("orig_img.png")
 img_w = img.shape[1]
 img_h = img.shape[0]
 
-print "img", img, img.shape
-mask = cv.CreateMat(img_h, img_w, cv.CV_8UC1)
+print "img", img
 
-print mask
-
-# mask = np.zeros((img_h, img_w))
+mask = np.zeros((img_h, img_w), dtype=np.uint8)
 
 for x in xrange(img_w):
 	for y in xrange(img_h):
@@ -52,11 +49,9 @@ for x in xrange(img_w):
 		g = img[y][x][1]
 		b = img[y][x][0]
 		if (r > 1.3 * g and r > 1.3 * b):
-			mask[y][x] = 255
+			mask[y][x] = np.array([255], dtype=np.uint8)
 		else:
-			mask[y][x] = 0
-
-# tmp = cv.fromarray(mask)
+			mask[y][x] = np.array([0], dtype=np.uint8)
 
 print "mask", mask, mask.shape
 cv2.imwrite("mask_produced.png", mask)
