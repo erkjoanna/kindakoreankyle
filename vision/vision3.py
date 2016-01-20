@@ -65,21 +65,20 @@ def calculate_average(src, x, y):
 		total_y += current_y
 		total += 1
 
-		if x > 0: # search left
-			if check_neighbor(src, x-1, y):
-				q.put((x-1, y))
-
+		if current_x > 0: # search left
+			if check_neighbor(src, current_x-1, current_y):
+				q.put((current_x-1, current_y))
 		if x < src.shape[1] - 1: # search right
-			if check_neighbor(src, x+1, y):
-				q.put((x+1, y))
+			if check_neighbor(src, current_x+1, current_y):
+				q.put((current_x+1, current_y))
 
 		if y > 0:
-			if check_neighbor(src, x, y-1):
-				q.put((x, y-1))
+			if check_neighbor(src, current_x, current_y-1):
+				q.put((current_x, current_y-1))
 
 		if y < src.shape[0] - 1:
-			if check_neighbor(src, x, y+1):
-				q.put((x, y+1))
+			if check_neighbor(src, current_x, current_y+1):
+				q.put((current_x, current_y+1))
 
 	# Take average
 	avg_x = float(total_x)/total
