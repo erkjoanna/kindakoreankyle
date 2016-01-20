@@ -9,15 +9,15 @@ class GyroSquare (SyncedSketch):
     #if pin descriptions are inside class, must be inserted as
     #self.pin in the arguments
     GYRO = 10
-    DIR1 = 27
-    DIR2 = 28
-    PWM1 = 3
-    PWM2 = 4
+    DIR1 = 28
+    DIR2 = 27
+    PWM1 = 4
+    PWM2 = 3
 
     #states
     TURNING = 0
     MOVING = 1 
-    GOAL_ANGLE = 30
+    GOAL_ANGLE = 20
 
     def setup(self):
         #setting up the gyro and two motors
@@ -43,7 +43,7 @@ class GyroSquare (SyncedSketch):
                 #checking the change in angle
                 if self.timer.millis()>100:
                     self.timer.reset()
-                    print "difference: ", (self.gyro.val)-peek
+                    print "difference: ", (self.gyro.val)-peek, peek 
                     #change the angle
                     self.motor1.write(0,25)
                     self.motor2.write(0,25)
