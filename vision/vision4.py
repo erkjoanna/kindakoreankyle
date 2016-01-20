@@ -55,7 +55,7 @@ def check_neighbor(src, x, y):
 	b = src[y][x][0]
 
 	if r > 1.3*g and r > 1.3*b:
-		src[current_y][current_x] = np.array([0, 0, 0], dtype=np.uint8)
+		src[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 		return True
 	
 	return False
