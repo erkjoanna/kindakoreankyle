@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import scipy.misc
 import time, math
 from Queue import *
 from constants import *
@@ -117,9 +116,8 @@ def vision(color):
 		_, temp = camera.read()
 
 	# Take the actual image we want to keep
-	_, camera_capture = camera.read()
+	_, img = camera.read()
 
-	img = scipy.misc.imresize(camera_capture, 0.25)
 	img_w = img.shape[1]
 	img_h = img.shape[0]
 
