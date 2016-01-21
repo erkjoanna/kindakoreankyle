@@ -108,7 +108,7 @@ distance - the distance the robot should move forward.
 '''
 def vision(color):
 
-	camera = cv2.VideoCapture(WEB_CAM)
+	camera = cv2.VideoCapture(COMPUTER_CAM)
 
 
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
@@ -178,6 +178,6 @@ def vision(color):
 
 				print "angle", angle, "degrees", "distance", distance, "centimeters"
 
-	del(camera)
+	camera.release()
 
 	return (angle, distance)
