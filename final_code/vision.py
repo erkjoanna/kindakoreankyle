@@ -108,7 +108,7 @@ distance - the distance the robot should move forward.
 '''
 def vision(color):
 
-	camera = cv2.VideoCapture(COMPUTER_CAM)
+	camera = cv2.VideoCapture(WEB_CAM)
 
 
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
@@ -125,30 +125,8 @@ def vision(color):
 
 	cv2.imwrite("orig_img.png", img)
 
-
-	# TODO: Do we even need a mask and bitwise result?
-	#		We could just perform flood fill on the original image.
-	# Creating mask
-	mask = np.zeros((img_h, img_w), dtype=np.uint8)
-
-	for x in xrange(img_w):
-		for y in xrange(img_h):
-
-			if check_game_color(img, x, y, color):
-				mask[y][x] = np.array([255], dtype=np.uint8)
-			else:
-				mask[y][x] = np.array([0], dtype=np.uint8)
-
-	cv2.imwrite("mask.png", mask)
-
-	# Creating color result after bitwise adding the mask
-	res_color = cv2.bitwise_and(img, img, mask= mask)
-
-	cv2.imwrite("color_only.png", res_color)
-
-
 	# Flood Fill
-	img2 = np.copy(res_color)
+	img2 = np.copy(img)
 
 	largest_blob = 0
 	final_avg_x = 0
@@ -157,33 +135,32 @@ def vision(color):
 	for x in xrange(img_w):
 		for y in xrange(img_h):
 
-			if check_game_color(img, x, y, color):
-
+			if check_game_color(img2, x, y, color):
 				avg_x, avg_y, total = calculate_average(img2, x, y, color)
 
 				if (total > largest_blob):
 					largest_blob = total
 					final_avg_x = avg_x
 					final_avg_y = avg_y
+			else:
+				img2[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 
 	img2[final_avg_y][final_avg_x] = np.array([255, 0, 0], dtype=np.uint8)
+	print final_avg_x, final_avg_y
 
-	cv2.imwrite("color_only_with_average.png", img2)
+	cv2.imwrite("img_with_average.png", img2)
 
 
 	# Calculating angle and distance
-	img = cv2.imread("color_only_with_average.png")
-	img_w = img.shape[1]
-	img_h = img.shape[0]
 
-	# TODO: Move to constants file
 	middle_w = img_w/2.0
+	# TODO: Move to constants file
 	k = .06
 
 	for x in xrange(img_w):
 		for y in xrange(img_h):
 			# Green pixel found
-			if (img[y][x][0] == 255 and img[y][x][1] == 0 and img[y][x][2] == 0):
+			if (img2[y][x][0] == 255 and img2[y][x][1] == 0 and img2[y][x][2] == 0):
 				# Get x coordinate of the pixel
 				# Compare it to middle_w
 				difference = middle_w - x
