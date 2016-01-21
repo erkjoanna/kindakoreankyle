@@ -3,24 +3,22 @@ import numpy as np
 import scipy.misc
 import time, math
 from Queue import *
+from constants import *
 
-
-camera_port = 1
-ramp_frames = 30
-camera = cv2.VideoCapture(camera_port)
 
 '''
 Params:
 src - the source image
 x - x-coordinate of the pixel of color object
 y - y-coordinate of the pixel of color object
+color - color of the game
 
 Returns:
 avg_x - the average x-coordinate of all the pixels in the color object
 avg_y - the average y-coordinate of all the pixels in the color object
 total - the total number of pixels in the color object
 '''
-def calculate_average(src, x, y):
+def calculate_average(src, x, y, color):
 
 	total_x = 0
 	total_y = 0
@@ -39,18 +37,18 @@ def calculate_average(src, x, y):
 		total += 1
 
 		if current_x > 0: # search left
-			if check_neighbor(src, current_x-1, current_y):
+			if check_neighbor(src, current_x-1, current_y, color):
 				q.put((current_x-1, current_y))
 		if current_x < src.shape[1] - 1: # search right
-			if check_neighbor(src, current_x+1, current_y):
+			if check_neighbor(src, current_x+1, current_y, color):
 				q.put((current_x+1, current_y))
 
 		if current_y > 0:
-			if check_neighbor(src, current_x, current_y-1):
+			if check_neighbor(src, current_x, current_y-1, color):
 				q.put((current_x, current_y-1))
 
 		if current_y < src.shape[0] - 1:
-			if check_neighbor(src, current_x, current_y+1):
+			if check_neighbor(src, current_x, current_y+1, color):
 				q.put((current_x, current_y+1))
 
 	# Take average
@@ -65,16 +63,14 @@ Params:
 src - the source image
 x - x-coordinate of the pixel of color object
 y - y-coordinate of the pixel of color object
+color - color of the game
 
 Returns:
 True if the neighboring pixel is a red pixel, otherwise False
 '''
-def check_neighbor(src, x, y):
-	r = src[y][x][2]
-	g = src[y][x][1]
-	b = src[y][x][0]
+def check_neighbor(src, x, y, color):
 
-	if (r > 1.3 * g) and (r > 1.3 * b):
+	if check_game_color(src, x, y, color):
 		src[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 
 		return True
@@ -99,13 +95,6 @@ def check_game_color(img, x, y, color):
 	
 
 '''
-Returns the image read from the camera
-'''
-def get_image():
-	retval, im = camera.read()
-	return im 
-
-'''
 Function that tells the robot what angle to turn at and the distance
 it should move at.
 
@@ -119,15 +108,16 @@ distance - the distance the robot should move forward.
 '''
 def vision(color):
 
+	camera = cv2.VideoCapture(WEB_CAM)
+
 
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
 	# to adjust light levels, if necessary
-	for i in xrange(ramp_frames):
-		temp = get_image()
-
+	for i in xrange(RAMP_FRAMES):
+		_, temp = camera.read()
 
 	# Take the actual image we want to keep
-	camera_capture = get_image()
+	_, camera_capture = camera.read()
 
 	img = scipy.misc.imresize(camera_capture, 0.25)
 	img_w = img.shape[1]
@@ -154,7 +144,7 @@ def vision(color):
 	# Creating color result after bitwise adding the mask
 	res_color = cv2.bitwise_and(img, img, mask= mask)
 
-	cv2.imwrite("color_only.png", res_red)
+	cv2.imwrite("color_only.png", res_color)
 
 
 	# Flood Fill
@@ -169,7 +159,7 @@ def vision(color):
 
 			if check_game_color(img, x, y, color):
 
-				avg_x, avg_y, total = calculate_average(img2, x, y)
+				avg_x, avg_y, total = calculate_average(img2, x, y, color)
 
 				if (total > largest_blob):
 					largest_blob = total
@@ -209,6 +199,8 @@ def vision(color):
 					# RIGHTSIDE
 					angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
 
-				print "angle", angle, "degrees", "distance", distance, "inches"
+				print "angle", angle, "degrees", "distance", distance, "centimeters"
+
+	del(camera)
 
 	return (angle, distance)

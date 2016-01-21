@@ -9,10 +9,10 @@ MOVING  = 2
 
 ####################PINS######################
 #----------------IR SENSORS------------------#
-LONG1 = A10
-SHORT1 = A11
-LONG2 = A12
-SHORT2 = A13
+LONG1 = 10 #A10
+SHORT1 = 11 #A11
+LONG2 = 12 #A12
+SHORT2 = 13 #A13
 LONG3 = 27
 SHORT3 = 28
 LONG4 = 23
@@ -34,5 +34,11 @@ GYRO = 10 #chip select
 #GYRO_OUT = 12 #MISO
 #COLOR_SENSOR_SCL = 19 #these are already defined in original adafruit library because only 1 pair of scl/sda channels
 #COLOR_SENSOR_SDA = 18
+
+####################VISION######################
+#---------------CAMERA PORT-----------------#
+COMPUTER_CAM = 0
+WEB_CAM = 1
+RAMP_FRAMES = 30
 
 
