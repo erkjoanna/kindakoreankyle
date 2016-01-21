@@ -6,8 +6,6 @@ from Queue import *
 
 
 camera_port = 1
- 
-#Number of frames to throw away while the camera adjusts to light levels
 ramp_frames = 30
 camera = cv2.VideoCapture(camera_port)
 
@@ -83,25 +81,41 @@ def check_neighbor(src, x, y):
 	
 	return False
 
+'''
+Params:
+img - the source image
+x - x-coordinate of pixel
+y - y-coordinate of pixel
+color - boolean, RED(0) or GREEN(1)
+
+Returns:
+True if pixel color is the color, else False
+'''
+def check_game_color(img, x, y, color):
+	if (img[y][x][2-color] > 1.3 * img[y][x][0] and img[y][x][2-color] > 1.3 * img[y][x][1+color]):
+		return True
+	else:
+		return False
+	
 
 '''
 Returns the image read from the camera
 '''
 def get_image():
 	retval, im = camera.read()
-	return im
- 
+	return im 
 
 '''
+Function that tells the robot what angle to turn at and the distance
+it should move at.
+
 Params:
-src - the source image
-x - x-coordinate of the pixel of color object
-y - y-coordinate of the pixel of color object
+color - boolean, RED(0) or GREEN(1)
 
 Returns:
-avg_x - the average x-coordinate of all the pixels in the color object
-avg_y - the average y-coordinate of all the pixels in the color object
-total - the total number of pixels in the color object
+angle - the angle the robot to turn at. Middle is 0 degrees. 
+		Angles to the right are positive and Angles to the left are negative.
+distance - the distance the robot should move forward.
 '''
 def vision(color):
 
@@ -110,7 +124,6 @@ def vision(color):
 	# to adjust light levels, if necessary
 	for i in xrange(ramp_frames):
 		temp = get_image()
-
 
 
 	# Take the actual image we want to keep
@@ -122,87 +135,80 @@ def vision(color):
 
 	cv2.imwrite("orig_img.png", img)
 
+
+	# TODO: Do we even need a mask and bitwise result?
+	#		We could just perform flood fill on the original image.
 	# Creating mask
 	mask = np.zeros((img_h, img_w), dtype=np.uint8)
 
 	for x in xrange(img_w):
 		for y in xrange(img_h):
 
-			r = img[y][x][2]
-			g = img[y][x][1]
-			b = img[y][x][0]
-
-			if (r > 1.3 * g and r > 1.3 * b):
+			if check_game_color(img, x, y, color):
 				mask[y][x] = np.array([255], dtype=np.uint8)
 			else:
 				mask[y][x] = np.array([0], dtype=np.uint8)
 
-	cv2.imwrite("mask_2.png", mask)
+	cv2.imwrite("mask.png", mask)
 
-	print "Creating resulting red only picture..."
+	# Creating color result after bitwise adding the mask
+	res_color = cv2.bitwise_and(img, img, mask= mask)
 
-res_red = cv2.bitwise_and(img, img, mask= mask)
-
-cv2.imwrite("red_2.png", res_red)
-
-print "Flood fill to find average..."
-
-img2 = np.copy(res_red)
-
-largest_blob = 0
-final_avg_x = 0
-final_avg_y = 0
-
-# Loop through each pixel of the red result and check if there is a red pixel
-for x in xrange(img_w):
-	for y in xrange(img_h):
-
-		r = img2[y][x][2]
-		g = img2[y][x][1]
-		b = img2[y][x][0]
-
-		if (r > 1.3 * g) and (r > 1.3 * b):
-
-			# Run 'Flood Fill' to find the average of the blob it incapsulates.
-			avg_x, avg_y, total = calculate_average(img2, x, y)
-
-			if (total > largest_blob):
-				largest_blob = total
-				final_avg_x = avg_x
-				final_avg_y = avg_y
-
-img2[final_avg_y][final_avg_x] = np.array([0, 255, 0], dtype=np.uint8)
-
-print "Writing red image with averages..."
-cv2.imwrite("red_avg_2.png", img2)
+	cv2.imwrite("color_only.png", res_red)
 
 
-print "Finding angle and distance..."
+	# Flood Fill
+	img2 = np.copy(res_color)
 
-img = cv2.imread("red_avg_2.png")
-img_w = img.shape[1]
-img_h = img.shape[0]
+	largest_blob = 0
+	final_avg_x = 0
+	final_avg_y = 0
 
-middle_w = img_w/2.0
-k = .01 # each pixel is about .01 inches
+	for x in xrange(img_w):
+		for y in xrange(img_h):
 
-for x in xrange(img_w):
-	for y in xrange(img_h):
-		# Green pixel found
-		if (img[y][x][0] == 0 and img[y][x][1] == 255 and img[y][x][2] == 0):
-			# Get x coordinate of the pixel
-			# Compare it to middle_w
-			difference = middle_w - x
-			actual_x = abs(difference)
-			actual_y = img_h - y
+			if check_game_color(img, x, y, color):
 
-			distance = math.hypot(actual_x, actual_y)*k
+				avg_x, avg_y, total = calculate_average(img2, x, y)
 
-			if difference > 0:
-				# LEFTSIDE
-				angle = - math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
-			else:
-				# RIGHTSIDE
-				angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
+				if (total > largest_blob):
+					largest_blob = total
+					final_avg_x = avg_x
+					final_avg_y = avg_y
 
-			print "angle", angle, "degrees", "distance", distance, "inches"
+	img2[final_avg_y][final_avg_x] = np.array([255, 0, 0], dtype=np.uint8)
+
+	cv2.imwrite("color_only_with_average.png", img2)
+
+
+	# Calculating angle and distance
+	img = cv2.imread("color_only_with_average.png")
+	img_w = img.shape[1]
+	img_h = img.shape[0]
+
+	# TODO: Move to constants file
+	middle_w = img_w/2.0
+	k = .06
+
+	for x in xrange(img_w):
+		for y in xrange(img_h):
+			# Green pixel found
+			if (img[y][x][0] == 255 and img[y][x][1] == 0 and img[y][x][2] == 0):
+				# Get x coordinate of the pixel
+				# Compare it to middle_w
+				difference = middle_w - x
+				actual_x = abs(difference)
+				actual_y = img_h - y
+
+				distance = math.hypot(actual_x, actual_y)*k
+
+				if difference > 0:
+					# LEFTSIDE
+					angle = - math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
+				else:
+					# RIGHTSIDE
+					angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
+
+				print "angle", angle, "degrees", "distance", distance, "inches"
+
+	return (angle, distance)
