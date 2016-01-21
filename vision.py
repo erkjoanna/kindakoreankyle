@@ -5,7 +5,6 @@ import time, math
 from Queue import *
 
 
-# Camera 0 is the integrated web cam on my netbook
 camera_port = 1
  
 #Number of frames to throw away while the camera adjusts to light levels
@@ -19,7 +18,9 @@ x - x-coordinate of the pixel of color object
 y - y-coordinate of the pixel of color object
 
 Returns:
-the average of all the pixels the color object is composed of
+avg_x - the average x-coordinate of all the pixels in the color object
+avg_y - the average y-coordinate of all the pixels in the color object
+total - the total number of pixels in the color object
 '''
 def calculate_average(src, x, y):
 
@@ -61,6 +62,15 @@ def calculate_average(src, x, y):
 	return avg_x, avg_y, total
 
 
+'''
+Params:
+src - the source image
+x - x-coordinate of the pixel of color object
+y - y-coordinate of the pixel of color object
+
+Returns:
+True if the neighboring pixel is a red pixel, otherwise False
+'''
 def check_neighbor(src, x, y):
 	r = src[y][x][2]
 	g = src[y][x][1]
@@ -81,44 +91,55 @@ def get_image():
 	retval, im = camera.read()
 	return im
  
-# Ramp the camera - these frames will be discarded and are only used to allow v4l2
-# to adjust light levels, if necessary
-for i in xrange(ramp_frames):
-	temp = get_image()
+
+'''
+Params:
+src - the source image
+x - x-coordinate of the pixel of color object
+y - y-coordinate of the pixel of color object
+
+Returns:
+avg_x - the average x-coordinate of all the pixels in the color object
+avg_y - the average y-coordinate of all the pixels in the color object
+total - the total number of pixels in the color object
+'''
+def vision(color):
 
 
-print "Taking pictures..."
-
-# Take the actual image we want to keep
-camera_capture = get_image()
-
-# Scale down the image by 1/4
-img = scipy.misc.imresize(camera_capture, 0.25)
-
-img = cv2.imread("orig_img.png")
-img_w = img.shape[1]
-img_h = img.shape[0]
+	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
+	# to adjust light levels, if necessary
+	for i in xrange(ramp_frames):
+		temp = get_image()
 
 
-print "Creating mask..."
 
-mask = np.zeros((img_h, img_w), dtype=np.uint8)
+	# Take the actual image we want to keep
+	camera_capture = get_image()
 
-for x in xrange(img_w):
-	for y in xrange(img_h):
+	img = scipy.misc.imresize(camera_capture, 0.25)
+	img_w = img.shape[1]
+	img_h = img.shape[0]
 
-		r = img[y][x][2]
-		g = img[y][x][1]
-		b = img[y][x][0]
+	cv2.imwrite("orig_img.png", img)
 
-		if (r > 1.3 * g and r > 1.3 * b):
-			mask[y][x] = np.array([255], dtype=np.uint8)
-		else:
-			mask[y][x] = np.array([0], dtype=np.uint8)
+	# Creating mask
+	mask = np.zeros((img_h, img_w), dtype=np.uint8)
 
-cv2.imwrite("mask_2.png", mask)
+	for x in xrange(img_w):
+		for y in xrange(img_h):
 
-print "Creating resulting red only picture..."
+			r = img[y][x][2]
+			g = img[y][x][1]
+			b = img[y][x][0]
+
+			if (r > 1.3 * g and r > 1.3 * b):
+				mask[y][x] = np.array([255], dtype=np.uint8)
+			else:
+				mask[y][x] = np.array([0], dtype=np.uint8)
+
+	cv2.imwrite("mask_2.png", mask)
+
+	print "Creating resulting red only picture..."
 
 res_red = cv2.bitwise_and(img, img, mask= mask)
 
