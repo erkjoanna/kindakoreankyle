@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import time, math
+import scipy.misc
 from Queue import *
 from constants import *
 
@@ -107,7 +108,7 @@ distance - the distance the robot should move forward.
 '''
 def vision(color):
 
-	camera = cv2.VideoCapture(WEB_CAM)
+	camera = cv2.VideoCapture(COMPUTER_CAM)
 
 
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
