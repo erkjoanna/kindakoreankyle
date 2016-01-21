@@ -13,9 +13,7 @@ def thread1():
     global most_recent_angle
     global most_recent_distance
     while True:
-        most_recent_angle, most_recent_distance = vision(color)
-        print "new_reading:", most_recent_angle
-
+       most_recent_angle, most_recent_distance = vision(color)
 
 class Movement (SyncedSketch):
 
@@ -25,6 +23,7 @@ class Movement (SyncedSketch):
 
     def setup(self):
         #setting up the gyro and two motors
+        
         self.gyro = Gyro(self.tamp, GYRO, integrate = True)
         self.motor1 = Motor(self.tamp, DIR1, PWM1)
         self.motor2 = Motor(self.tamp, DIR2, PWM2)
@@ -37,22 +36,20 @@ class Movement (SyncedSketch):
         self.state = CALCULATING
         self.starting_angle = self.gyro.val
         self.desired_angle = 0
-
-        thread_vision = Thread( target=thread1, args=())
-        thread_vision.start()
+        
 
     def loop(self):
         if self.state == CALCULATING:
             angle = most_recent_angle
             distance = most_recent_distance
-            starting_angle = self.gyro.val
+            self.starting_angle = self.gyro.val
             self.state = TURNING
         elif self.state == TURNING:
             #take a snapshot of the current gyro number
-#            print "starting_angle: ",self.starting_angle #check
 
             #while the robot hasn't turned desired degrees yet
             if self.timer.millis()>100:
+                print "starting_angle: ", self.starting_angle #check
                 print "difference: ",(self.gyro.val)-self.starting_angle
                 self.timer.reset()
                 if self.desired_angle > 0:
@@ -69,13 +66,15 @@ class Movement (SyncedSketch):
                     self.state = MOVING
         elif self.state == MOVING:
             #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-            if self.timer.millis() > 2000:
+            if self.timer.millis() > 8000:
                 self.motor1.write(1,10)
                 self.motor2.write(0,10)             
                 self.state = CALCULATING
-                self.state = TURNING
                 self.timer.reset()
 
 if __name__ == "__main__":
+    thread_vision = Thread( target=thread1, args=())
+    thread_vision.start()
+
     sketch = Movement(3,-0.00001, 100)
     sketch.run()
