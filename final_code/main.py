@@ -14,6 +14,7 @@ def thread1():
     global most_recent_distance
     while True:
        most_recent_angle, most_recent_distance = vision(color)
+       print most_recent_angle, most_recent_distance
 
 class Movement (SyncedSketch):
 
@@ -34,9 +35,7 @@ class Movement (SyncedSketch):
         self.timer = Timer() #setting the timer
 
         self.state = CALCULATING
-        self.starting_angle = self.gyro.val
-        self.desired_angle = 0
-        
+        self.starting_angle = self.gyro.val     
 
     def loop(self):
         if self.state == CALCULATING:
@@ -49,26 +48,27 @@ class Movement (SyncedSketch):
 
             #while the robot hasn't turned desired degrees yet
             if self.timer.millis()>100:
-                print "starting_angle: ", self.starting_angle #check
+                #print "starting_angle: ", self.starting_angle #check.
                 print "difference: ",(self.gyro.val)-self.starting_angle
                 self.timer.reset()
-                if self.desired_angle > 0:
+                if most_recent_angle > 0:
                     self.motor1.write(0,10)
                     self.motor2.write(0,10)
-                    if ((self.gyro.val) - self.starting_angle) > self.desired_angle:
+                    if ((self.gyro.val) - self.starting_angle) > most_recent_angle:
                         self.state = MOVING        
-                elif self.desired_angle < 0:
+                elif most_recent_angle < 0:
                     self.motor1.write(1,10)
                     self.motor2.write(1,10)
-                    if ((self.gyro.val) - self.starting_angle) < self.desired_angle:
+                    if ((self.gyro.val) - self.starting_angle) < most_recent_angle:
                         self.state = MOVING
                 else:
                     self.state = MOVING
         elif self.state == MOVING:
             #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-            if self.timer.millis() > 8000:
-                self.motor1.write(1,10)
-                self.motor2.write(0,10)             
+            self.motor1.write(1,10)
+            self.motor2.write(0,10) 
+            
+            if self.timer.millis() > 3000:            
                 self.state = CALCULATING
                 self.timer.reset()
 

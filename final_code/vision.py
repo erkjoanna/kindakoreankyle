@@ -108,7 +108,8 @@ distance - the distance the robot should move forward.
 '''
 def vision(color):
 
-	camera = cv2.VideoCapture(COMPUTER_CAM)
+	time.sleep(5)
+	camera = cv2.VideoCapture(1)
 
 
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
