@@ -116,8 +116,9 @@ def vision(color):
 		_, temp = camera.read()
 
 	# Take the actual image we want to keep
-	_, img = camera.read()
+	_, camera_capture = camera.read()
 
+	img = scipy.misc.imresize(camera_capture, 0.25)
 	img_w = img.shape[1]
 	img_h = img.shape[0]
 
