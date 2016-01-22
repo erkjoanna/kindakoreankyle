@@ -1,32 +1,31 @@
 from tamproxy import Sketch, SyncedSketch, Timer
-from tamproxy.devices import Gyro, Motor
+from tamproxy.devices import Gyro, Motor, Color
 from constants import *
 from threading import Thread
 from vision import *
 
-color = RED
+our_color = RED
 most_recent_angle = 0
 most_recent_distance = 0
 
-def thread1():
-    global color
+def vision_thread():
+    global our_color
     global most_recent_angle
     global most_recent_distance
 
     port = findPort()
     while True:
-       most_recent_angle, most_recent_distance = vision(color, port)
+       most_recent_angle, most_recent_distance = vision(our_color, port)
        print most_recent_angle, most_recent_distance
 
 class Movement (SyncedSketch):
 
-    global color
+    global our_color
     global most_recent_angle
     global most_recent_distance
 
     def setup(self):
         #setting up the gyro and two motors
-        
         self.gyro = Gyro(self.tamp, GYRO, integrate = True)
         self.motor1 = Motor(self.tamp, DIR1, PWM1)
         self.motor2 = Motor(self.tamp, DIR2, PWM2)
@@ -34,12 +33,28 @@ class Movement (SyncedSketch):
         #setting motor orientations (for fun)
         self.motor1.write(1,0) #1 is forward for Motor 1
         self.motor2.write(0,0) #0 is forward for Motor 2
+        
+        #setting the timer
         self.timer = Timer() #setting the timer
+        self.timer2 = Timer() #setting the timer
 
+        #setting up the color sensor
+        self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
+
+        #robot movement variables
         self.state = CALCULATING
         self.starting_angle = self.gyro.val     
+        
+        #flapper variables
+        self.detected_color = NOBLOCK
+        self.color_count = 0
+        self.desired_color_count = 2 #want to read consecutive readings to ascertain color
 
     def loop(self):
+        if self.timer2.millis()>100:
+            self.timer2.reset()
+            self.color_sorting()
+
         if self.state == CALCULATING:
             angle = most_recent_angle
             distance = most_recent_distance
@@ -74,8 +89,28 @@ class Movement (SyncedSketch):
                 self.state = CALCULATING
                 self.timer.reset()
 
+    def color_sorting(self):
+        if (self.color.r > 1.3 * self.color.g and self.color.r > 1.3 * self.color.b):
+            if self.detected_color == RED:
+                self.count = self.count + 1
+            else:
+                self.detected_color = RED
+                self.count = 0
+        elif (self.color.g > 1.3 * self.color.r and self.color.g > 1.3 * self.color.b):
+            if self.detected_color == GREEN:
+                self.count = self.count + 1
+            else:
+                self.detected_color = GREEN
+                self.count = 0
+
+        if not self.detected_color == NOBLOCK and self.count > 5:
+            #decide the appropriate place to move slapper
+            print "color is", self.detected_color
+            self.detected_color = NOBLOCK
+            self.count = 0
+
 if __name__ == "__main__":
-    thread_vision = Thread( target=thread1, args=())
+    thread_vision = Thread( target=vision_thread, args=())
     thread_vision.start()
 
     sketch = Movement(3,-0.00001, 100)
