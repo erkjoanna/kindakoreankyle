@@ -12,8 +12,10 @@ def thread1():
     global color
     global most_recent_angle
     global most_recent_distance
+
+    port = findPort()
     while True:
-       most_recent_angle, most_recent_distance = vision(color)
+       most_recent_angle, most_recent_distance = vision(color, port)
        print most_recent_angle, most_recent_distance
 
 class Movement (SyncedSketch):

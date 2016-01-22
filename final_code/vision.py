@@ -95,6 +95,20 @@ def check_game_color(img, x, y, color):
 	
 
 '''
+Function that finds out what port the webcam is connected to
+'''
+def findPort():
+	port = 0
+	isFunctional = False
+
+	while not isFunctional:
+		port = port + 1
+		camera = cv2.VideoCapture(port)
+		isFunctional, temp = camera.read()
+
+	return port
+
+'''
 Function that tells the robot what angle to turn at and the distance
 it should move at.
 
@@ -106,12 +120,11 @@ angle - the angle the robot to turn at. Middle is 0 degrees.
 		Angles to the right are positive and Angles to the left are negative.
 distance - the distance the robot should move forward.
 '''
-def vision(color):
+def vision(color, port):
 
 	time.sleep(5)
-	camera = cv2.VideoCapture(1)
-
-
+	camera = cv2.VideoCapture(port)
+	
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
 	# to adjust light levels, if necessary
 	for i in xrange(RAMP_FRAMES):
