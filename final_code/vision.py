@@ -146,8 +146,8 @@ def vision(camera, color):
 	img_h = img.shape[0]
 
 	largest_blob = 0
-	final_avg_x = 0
-	final_avg_y = 0
+	final_avg_x = None
+	final_avg_y = None
 
 	pixelskip = 4 #constant we tune, we skip to the nth next pixel
 	for fractionx in xrange(img_w/pixelskip):
@@ -164,8 +164,10 @@ def vision(camera, color):
 			else:
 				img[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 
+	if final_avg_x == None and final_avg_y == None:
+		return (None, None)
+
 	img[final_avg_y][final_avg_x] = np.array([255, 0, 0], dtype=np.uint8)
-	# print final_avg_x, final_avg_y
 
 	cv2.imwrite("img_with_average.png", img)
 
@@ -179,7 +181,8 @@ def vision(camera, color):
 	actual_x = abs(difference)
 	actual_y = img_h - final_avg_y
 
-	distance = math.hypot(actual_x, actual_y)*k
+	distance = math.hypot(actual_x, actual_y) * k
+
 
 	if difference > 0:
 		# LEFTSIDE

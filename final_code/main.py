@@ -65,8 +65,14 @@ class Movement (SyncedSketch):
         if self.state == CALCULATING:
             angle = most_recent_angle
             distance = most_recent_distance
+
+            # Vision does not see any color, rotate in place.
+            if angle == None and distance == None:
+                self.angle = 360
+
             self.starting_angle = self.gyro.val
             self.state = TURNING
+
         elif self.state == TURNING:
             #take a snapshot of the current gyro number
 
