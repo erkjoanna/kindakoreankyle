@@ -88,8 +88,8 @@ Returns:
 True if pixel color is the color, else False
 '''
 def check_game_color(img, x, y, color):
-	return img[y][x][2-color] > 1.3 * img[y][x][0] and img[y][x][2-color] > 1.3 * img[y][x][1+color]
-	
+    return img[y][x][2-color] > COLOR_CHECK * img[y][x][0] and img[y][x][2-color] > COLOR_CHECK * img[y][x][1+color]
+
 '''
 Function that finds out what port the webcam is connected to
 '''
@@ -130,7 +130,6 @@ angle - the angle the robot to turn at. Middle is 0 degrees.
 distance - the distance the robot should move forward.
 '''
 def vision(camera, color):
-   
 	# time.sleep(1)
     
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2

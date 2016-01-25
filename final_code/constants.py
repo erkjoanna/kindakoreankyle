@@ -41,5 +41,6 @@ GYRO = 10 #chip select
 COMPUTER_CAM = 0
 WEB_CAM = 1
 RAMP_FRAMES = 30
+COLOR_CHECK = 1.1
 
 
