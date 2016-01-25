@@ -5,7 +5,44 @@ import scipy.misc
 from Queue import *
 from constants import *
 
+###################### SETUP / CLEANUP ###########################
+'''
+Function that finds out what port the webcam is connected to
+'''
+def findPort():
+	port = 0
+	isFunctional = False
 
+	while not isFunctional:
+		port = port + 1
+		camera = cv2.VideoCapture(port)
+		isFunctional, temp = camera.read()
+
+	return port
+
+
+'''
+Function that sets up webcam
+
+Returns:
+camera - the camera that will take pictures
+'''
+def setup_vision():
+	camera = cv2.VideoCapture(findPort())
+	return camera
+
+
+'''
+Function that cleans up camera
+
+Params:
+camera - camera acquired to be released
+'''
+def cleanup_vision(camera):
+	camera.release()
+
+
+####################### ACTUAL VISION CODE ###########################
 '''
 Params:
 src - the source image
@@ -90,38 +127,13 @@ True if pixel color is the color, else False
 def check_game_color(img, x, y, color):
     return img[y][x][2-color] > COLOR_CHECK * img[y][x][0] and img[y][x][2-color] > COLOR_CHECK * img[y][x][1+color]
 
-'''
-Function that finds out what port the webcam is connected to
-'''
-def findPort():
-	port = 0
-	isFunctional = False
-
-	while not isFunctional:
-		port = port + 1
-		camera = cv2.VideoCapture(port)
-		isFunctional, temp = camera.read()
-
-	return port
-
-'''
-Function that sets up webcam
-'''
-def setup_vision():
-	camera = cv2.VideoCapture(findPort())
-	return camera
-'''
-Function that cleans up camera
-'''
-def cleanup_vision(camera):
-	camera.release()
-
 
 '''
 Function that tells the robot what angle to turn at and the distance
 it should move at.
 
 Params:
+camera - camera aquired
 color - boolean, RED(0) or GREEN(1)
 
 Returns:
