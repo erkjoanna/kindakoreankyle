@@ -196,7 +196,7 @@ class Movement (SyncedSketch):
             if (short_ir < THRESHOLD or long_ir < THRESHOLD):
                 sensors_too_close.append(i)
 
-        # It is stuck if 0, 1, 2 or 0, 4, 5 are < THRESHOLD
+        # It is stuck if sensors 0, 1, 2 or 0, 4, 5 are < THRESHOLD
 
         too_close_count_1 = 0
         for i in [i in sensors_too_close for i in STUCK_SENSORS_1]:
@@ -211,14 +211,10 @@ class Movement (SyncedSketch):
         # Stuck! (Robot is too close to walls and vision sees no color.)
         if (too_close_count_1 >= 3 or too_close_count_2 >= 3) and self.angle == None:
             self.stuck == STUCK
+            self.state = TURNING
 
         else:
             self.stuck == UNSTUCK
-
-
-        if (self.stuck == STUCK):
-            # Keep rotating
-            self.state = TURNING
 
 if __name__ == "__main__":
 
