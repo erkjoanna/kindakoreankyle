@@ -1,22 +1,29 @@
+import sys
+from signal import *
 from tamproxy import Sketch, SyncedSketch, Timer
 from tamproxy.devices import Gyro, Motor, Color
 from constants import *
 from threading import Thread
 from vision import *
 
+camera = None
 our_color = RED
 most_recent_angle = 0
 most_recent_distance = 0
 
-def vision_thread():
+def vision_thread(camera):
     global our_color
     global most_recent_angle
     global most_recent_distance
 
-    port = findPort()
     while True:
-       most_recent_angle, most_recent_distance = vision(our_color, port)
+       most_recent_angle, most_recent_distance = vision(camera, our_color)
        print most_recent_angle, most_recent_distance
+
+def set_end(*args):
+    if camera:
+        cleanup_vision(camera)
+    sys.exit(0)
 
 class Movement (SyncedSketch):
 
@@ -110,8 +117,17 @@ class Movement (SyncedSketch):
             self.count = 0
 
 if __name__ == "__main__":
-    thread_vision = Thread( target=vision_thread, args=())
+
+    camera = setup_vision()
+    
+    thread_vision = Thread( target=vision_thread, args=(camera,))
+    thread_vision.daemon = True
     thread_vision.start()
 
     sketch = Movement(3,-0.00001, 100)
     sketch.run()
+   
+    for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
+        signal(sig, set_end)
+    
+    time.sleep(10000)

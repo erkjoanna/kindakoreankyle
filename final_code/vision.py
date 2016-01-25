@@ -88,12 +88,8 @@ Returns:
 True if pixel color is the color, else False
 '''
 def check_game_color(img, x, y, color):
-	if (img[y][x][2-color] > 1.3 * img[y][x][0] and img[y][x][2-color] > 1.3 * img[y][x][1+color]):
-		return True
-	else:
-		return False
+	return img[y][x][2-color] > 1.3 * img[y][x][0] and img[y][x][2-color] > 1.3 * img[y][x][1+color]
 	
-
 '''
 Function that finds out what port the webcam is connected to
 '''
@@ -109,6 +105,19 @@ def findPort():
 	return port
 
 '''
+Function that sets up webcam
+'''
+def setup_vision():
+	camera = cv2.VideoCapture(findPort())
+	return camera
+'''
+Function that cleans up camera
+'''
+def cleanup_vision(camera):
+	camera.release()
+
+
+'''
 Function that tells the robot what angle to turn at and the distance
 it should move at.
 
@@ -120,35 +129,39 @@ angle - the angle the robot to turn at. Middle is 0 degrees.
 		Angles to the right are positive and Angles to the left are negative.
 distance - the distance the robot should move forward.
 '''
-def vision(color, port):
-
-	time.sleep(5)
-	camera = cv2.VideoCapture(port)
-	
+def vision(camera, color):
+   
+	# time.sleep(1)
+    
 	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
 	# to adjust light levels, if necessary
-	for i in xrange(RAMP_FRAMES):
-		_, temp = camera.read()
+	# for i in xrange(RAMP_FRAMES):
+	# 	_, temp = camera.read()
 
 	# Take the actual image we want to keep
 	_, camera_capture = camera.read()
 
 	img = scipy.misc.imresize(camera_capture, 0.25)
+
 	img_w = img.shape[1]
 	img_h = img.shape[0]
 
-	cv2.imwrite("orig_img.png", img)
+	# cv2.imwrite("orig_img.png", img)
+
 
 	# Flood Fill
-	img2 = np.copy(img)
+	# img2 = np.copy(img)
+	img2 = img
 
 	largest_blob = 0
 	final_avg_x = 0
 	final_avg_y = 0
 
-	for x in xrange(img_w):
-		for y in xrange(img_h):
-
+	pixelskip = 4 #constant we tune, we skip to the nth next pixel
+	for fractionx in xrange(img_w/pixelskip):
+		for fractiony in xrange(img_h/pixelskip):
+			x = fractionx * pixelskip
+			y = fractiony * pixelskip
 			if check_game_color(img2, x, y, color):
 				avg_x, avg_y, total = calculate_average(img2, x, y, color)
 
@@ -160,10 +173,9 @@ def vision(color, port):
 				img2[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 
 	img2[final_avg_y][final_avg_x] = np.array([255, 0, 0], dtype=np.uint8)
-	print final_avg_x, final_avg_y
+	# print final_avg_x, final_avg_y
 
 	cv2.imwrite("img_with_average.png", img2)
-
 
 	# Calculating angle and distance
 
@@ -190,8 +202,6 @@ def vision(color, port):
 					# RIGHTSIDE
 					angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
 
-				print "angle", angle, "degrees", "distance", distance, "centimeters"
-
-	camera.release()
+				# print "angle", angle, "degrees", "distance", distance, "centimeters"
 
 	return (angle, distance)
