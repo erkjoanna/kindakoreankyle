@@ -146,13 +146,6 @@ def vision(camera, color):
 	img_w = img.shape[1]
 	img_h = img.shape[0]
 
-	# cv2.imwrite("orig_img.png", img)
-
-
-	# Flood Fill
-	# img2 = np.copy(img)
-	img2 = img
-
 	largest_blob = 0
 	final_avg_x = 0
 	final_avg_y = 0
@@ -162,20 +155,20 @@ def vision(camera, color):
 		for fractiony in xrange(img_h/pixelskip):
 			x = fractionx * pixelskip
 			y = fractiony * pixelskip
-			if check_game_color(img2, x, y, color):
-				avg_x, avg_y, total = calculate_average(img2, x, y, color)
+			if check_game_color(img, x, y, color):
+				avg_x, avg_y, total = calculate_average(img, x, y, color)
 
 				if (total > largest_blob):
 					largest_blob = total
 					final_avg_x = avg_x
 					final_avg_y = avg_y
 			else:
-				img2[y][x] = np.array([0, 0, 0], dtype=np.uint8)
+				img[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 
-	img2[final_avg_y][final_avg_x] = np.array([255, 0, 0], dtype=np.uint8)
+	img[final_avg_y][final_avg_x] = np.array([255, 0, 0], dtype=np.uint8)
 	# print final_avg_x, final_avg_y
 
-	cv2.imwrite("img_with_average.png", img2)
+	cv2.imwrite("img_with_average.png", img)
 
 	# Calculating angle and distance
 
@@ -183,25 +176,19 @@ def vision(camera, color):
 	# TODO: Move to constants file
 	k = .06
 
-	for x in xrange(img_w):
-		for y in xrange(img_h):
-			# Green pixel found
-			if (img2[y][x][0] == 255 and img2[y][x][1] == 0 and img2[y][x][2] == 0):
-				# Get x coordinate of the pixel
-				# Compare it to middle_w
-				difference = middle_w - x
-				actual_x = abs(difference)
-				actual_y = img_h - y
+	difference = middle_w - final_avg_x
+	actual_x = abs(difference)
+	actual_y = img_h - final_avg_y
 
-				distance = math.hypot(actual_x, actual_y)*k
+	distance = math.hypot(actual_x, actual_y)*k
 
-				if difference > 0:
-					# LEFTSIDE
-					angle = - math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
-				else:
-					# RIGHTSIDE
-					angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
+	if difference > 0:
+		# LEFTSIDE
+		angle = - math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
+	else:
+		# RIGHTSIDE
+		angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
 
-				# print "angle", angle, "degrees", "distance", distance, "centimeters"
+	print "angle", angle, "degrees", "distance", distance, "centimeters"
 
 	return (angle, distance)
