@@ -144,11 +144,6 @@ distance - the distance the robot should move forward.
 def vision(camera, color):
 	# time.sleep(1)
     
-	# Ramp the camera - these frames will be discarded and are only used to allow v4l2
-	# to adjust light levels, if necessary
-	# for i in xrange(RAMP_FRAMES):
-	# 	_, temp = camera.read()
-
 	# Take the actual image we want to keep
 	_, camera_capture = camera.read()
 
