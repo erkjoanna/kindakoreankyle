@@ -18,18 +18,18 @@ STUCK_SENSORS_2 = [0, 4, 5]
 ####################PINS######################
 #----------------IR SENSORS------------------#
 # Clockwise every 60 degrees from the front
-LONG0 = 10 #A10
-SHORT0 = 11 #A11
-LONG1 = 12 #A12
-SHORT1 = 13 #A13
-LONG2 = 27
-SHORT2 = 28
-LONG3 = 23
-SHORT3 = 22
-LONG4 = 17
-SHORT4 = 16
-LONG5 = 15
-SHORT5 = 14
+LONG0 = 22 
+SHORT0 = 23 
+LONG1 = 16 
+SHORT1 = 17 
+LONG2 = 14
+SHORT2 = 15
+LONG3 = 28
+SHORT3 = 27
+LONG4 = 13 #A13
+SHORT4 = 12 #A12
+LONG5 = 11 #A11
+SHORT5 = 10 #A10
 THRESHOLD = 5
 
 #---------WHEEL MOTORS AND ENCODER-----------#
@@ -54,6 +54,9 @@ GYRO = 10 #chip select
 #GYRO_OUT = 12 #MISO
 #COLOR_SENSOR_SCL = 19 #these are already defined in original adafruit library because only 1 pair of scl/sda channels
 #COLOR_SENSOR_SDA = 18
+
+PWM7 = 21 # Servo PWM for Red
+PWM8 = 20 # Servo PWM for Green
 
 ####################VISION######################
 #---------------CAMERA PORT-----------------#
