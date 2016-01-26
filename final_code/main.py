@@ -90,7 +90,7 @@ class Movement (SyncedSketch):
 
     def loop(self):
 
-        # IR Sensor Readings
+        IR Sensor Readings
         if self.main_timer.millis() > 100:
 
             self.main_timer.reset()
@@ -204,7 +204,7 @@ class Movement (SyncedSketch):
                 too_close_count_1 += 1
 
         too_close_count_2 = 0
-        for i in [i in sensors_too_close for i in STUCK_SENSORS_2]
+        for i in [i in sensors_too_close for i in STUCK_SENSORS_2]:
             if i:
                 too_close_count_2 += 1
 

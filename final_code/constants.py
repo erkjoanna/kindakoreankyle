@@ -38,6 +38,10 @@ PWM1 = 3
 PWM2 = 6
 DIR2 = 7
 
+#---------------SLAPPER MOTORS-----------------#
+DIR6 = 31
+PWM6 = 32
+
 #-------------OTHER DEVICES------------------#
 GYRO = 10 #chip select
 #GYRO_IN = 11  #MOSI
