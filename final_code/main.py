@@ -1,14 +1,14 @@
 import sys
 from signal import *
 from tamproxy import Sketch, SyncedSketch, Timer
-from tamproxy.devices import Gyro, Motor, Color
+from tamproxy.devices import Gyro, Motor, Color, Encoder
 from constants import *
 from threading import Thread
 from vision import *
 from ir_sensor_helpers import *
 
 camera = None
-our_color = RED
+our_color = GREEN
 most_recent_angle = 0
 most_recent_distance = 0
 
@@ -35,8 +35,14 @@ class Movement (SyncedSketch):
     def setup(self):
         #setting up the gyro and two motors
         self.gyro = Gyro(self.tamp, GYRO, integrate = True)
+        self.encoder1 = Encoder(self.tamp, EN01, EN11, continuous=True)
+        self.encoder2 = Encoder(self.tamp, EN02, EN12, continuous=True)
+        self.encoder6 = Encoder(self.tamp, EN06, EN16, continuous=True)
         self.motor1 = Motor(self.tamp, DIR1, PWM1)
         self.motor2 = Motor(self.tamp, DIR2, PWM2)
+        self.motor3 = Motor(self.tamp, 21, 4)
+        self.motor5 = Motor(self.tamp, 22, 5)
+        self.motor6 = Motor(self.tamp, DIR6, PWM6)
 
         #initializing angle and distance
         self.angle = 0
@@ -45,35 +51,38 @@ class Movement (SyncedSketch):
         #setting motor orientations (for fun)
         self.motor1.write(1,0) #1 is forward for Motor 1
         self.motor2.write(0,0) #0 is forward for Motor 2
+        self.motor3.write(0,75)
+        self.motor5.write(0,75)
 
         self.gyro_timer = Timer() #setting the timer for turning
 
-        #setting up ir sensors
-        self.short0 = AnalogInput(self.tamp, SHORT0)
-        self.short1 = AnalogInput(self.tamp, SHORT1)
-        self.short2 = AnalogInput(self.tamp, SHORT2)
-        self.short3 = AnalogInput(self.tamp, SHORT3)
-        self.short4 = AnalogInput(self.tamp, SHORT4)
-        self.short5 = AnalogInput(self.tamp, SHORT5)
-        self.long0 = AnalogInput(self.tamp, LONG0)
-        self.long1 = AnalogInput(self.tamp, LONG1)
-        self.long2 = AnalogInput(self.tamp, LONG2)
-        self.long3 = AnalogInput(self.tamp, LONG3)
-        self.long4 = AnalogInput(self.tamp, LONG4)
-        self.long5 = AnalogInput(self.tamp, LONG5)
+        # #setting up ir sensors
+        # self.short0 = AnalogInput(self.tamp, SHORT0)
+        # self.short1 = AnalogInput(self.tamp, SHORT1)
+        # self.short2 = AnalogInput(self.tamp, SHORT2)
+        # self.short3 = AnalogInput(self.tamp, SHORT3)
+        # self.short4 = AnalogInput(self.tamp, SHORT4)
+        # self.short5 = AnalogInput(self.tamp, SHORT5)
+        # self.long0 = AnalogInput(self.tamp, LONG0)
+        # self.long1 = AnalogInput(self.tamp, LONG1)
+        # self.long2 = AnalogInput(self.tamp, LONG2)
+        # self.long3 = AnalogInput(self.tamp, LONG3)
+        # self.long4 = AnalogInput(self.tamp, LONG4)
+        # self.long5 = AnalogInput(self.tamp, LONG5)
 
-        # Initializing list to hold IR sensors
-        self.ir_sensors = []
-        self.ir_sensors.append((self.short0, self.long0))
-        self.ir_sensors.append((self.short1, self.long1))
-        self.ir_sensors.append((self.short2, self.long2))
-        self.ir_sensors.append((self.short3, self.long3))
-        self.ir_sensors.append((self.short4, self.long4))
-        self.ir_sensors.append((self.short5, self.long5))
+        # # Initializing list to hold IR sensors
+        # self.ir_sensors = []
+        # self.ir_sensors.append((self.short0, self.long0))
+        # self.ir_sensors.append((self.short1, self.long1))
+        # self.ir_sensors.append((self.short2, self.long2))
+        # self.ir_sensors.append((self.short3, self.long3))
+        # self.ir_sensors.append((self.short4, self.long4))
+        # self.ir_sensors.append((self.short5, self.long5))
 
-        self.ir_readings = [(0,0)] * 6 # readings are formatted as (short, long)
+        # self.ir_readings = [(0,0)] * 6 # readings are formatted as (short, long)
 
         self.main_timer = Timer() # setting the timer for wall avoidance
+
 
         #setting up the color sensor
         self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
@@ -88,9 +97,11 @@ class Movement (SyncedSketch):
         self.color_count = 0
         self.desired_color_count = 2 #want to read consecutive readings to ascertain color
 
-    def loop(self):
+        self.finding = False
 
-        IR Sensor Readings
+    def loop(self):
+        # print self.main_timer.millis()
+        #IR Sensor Readings
         if self.main_timer.millis() > 100:
 
             self.main_timer.reset()
@@ -99,7 +110,7 @@ class Movement (SyncedSketch):
             self.color_sorting()
 
             # Check IR Sensors
-            self.check_ir_sensors()
+            # self.check_ir_sensor  AQSZs()
 
         
         if self.state == CALCULATING:
@@ -111,6 +122,7 @@ class Movement (SyncedSketch):
             # Vision does not see any color, rotate in place.
             if angle == None and distance == None:
                 self.angle = 360
+                self.finding = True
 
             self.starting_angle = self.gyro.val
             self.state = TURNING
@@ -118,7 +130,6 @@ class Movement (SyncedSketch):
             ###ENCODERS###
 
         elif self.state == TURNING:
-
             if (self.stuck == STUCK):
 
                 # Rotate if stuck until we're out of UNSTUCK state.
@@ -137,13 +148,19 @@ class Movement (SyncedSketch):
                     print "difference: ",(self.gyro.val)-self.starting_angle
                     self.gyro_timer.reset()
                     if self.angle > 0:
-                        self.motor1.write(0,10)
-                        self.motor2.write(0,10)
+                        self.motor1.write(0,30)
+                        self.motor2.write(0,30)
+                        if finding and most_recent_angle:
+                            self.state = CALCULATING
+                            return
                         if ((self.gyro.val) - self.starting_angle) > self.angle:
                             self.state = MOVING        
                     elif self.angle < 0:
-                        self.motor1.write(1,10)
-                        self.motor2.write(1,10)
+                        self.motor1.write(1,30)
+                        self.motor2.write(1,30)
+                        if finding and most_recent_angle:
+                            self.state = CALCULATING
+                            return
                         if ((self.gyro.val) - self.starting_angle) < self.angle:
                             self.state = MOVING
                     else:
@@ -151,8 +168,8 @@ class Movement (SyncedSketch):
 
         elif self.state == MOVING:
             #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-            self.motor1.write(1,10)
-            self.motor2.write(0,10) 
+            self.motor1.write(0,40)
+            self.motor2.write(1,40) 
             
             if self.gyro_timer.millis() > 3000:            
                 self.state = CALCULATING
@@ -166,7 +183,7 @@ class Movement (SyncedSketch):
             else:
                 self.detected_color = RED
                 self.count = 0
-        elif (self.color.g > 1.3 * self.color.r and self.color.g > 1.3 * self.color.b):
+        elif (self.color.g > COLOR_CHECK * self.color.r and self.color.g > COLOR_CHECK * self.color.b):
             if self.detected_color == GREEN:
                 self.count = self.count + 1
             else:
@@ -176,6 +193,12 @@ class Movement (SyncedSketch):
         if not self.detected_color == NOBLOCK and self.count > 5:
             #decide the appropriate place to move slapper
             print "color is", self.detected_color
+            self.motor6.write(self.detected_color, 20)
+            encoder_initial = self.encoder6.val
+            sign = 1-2*self.detected_color
+            # while (sign*(self.encoder6.val - encoder_initial) < 3200):
+                # continue
+            self.motor6.write(self.detected_color,0)
             self.detected_color = NOBLOCK
             self.count = 0
 
@@ -218,11 +241,11 @@ class Movement (SyncedSketch):
 
 if __name__ == "__main__":
 
-    camera = setup_vision()
+    # camera = setup_vision()
     
-    thread_vision = Thread( target=vision_thread, args=(camera,))
-    thread_vision.daemon = True
-    thread_vision.start()
+    # thread_vision = Thread( target=vision_thread, args=(camera,))
+    # thread_vision.daemon = True
+    # thread_vision.start()
 
     sketch = Movement(3,-0.00001, 100)
     sketch.run()
@@ -230,4 +253,4 @@ if __name__ == "__main__":
     for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
         signal(sig, set_end)
     
-    time.sleep(10000)
+    # time.sleep(10000)

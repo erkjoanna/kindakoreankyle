@@ -32,15 +32,21 @@ LONG5 = 15
 SHORT5 = 14
 THRESHOLD = 5
 
-#---------------WHEEL MOTORS-----------------#
+#---------WHEEL MOTORS AND ENCODER-----------#
 DIR1 = 2
 PWM1 = 3
-PWM2 = 6
-DIR2 = 7
+EN01 = 0
+EN11 = 1
 
-#---------------SLAPPER MOTORS-----------------#
+DIR2 = 7
+PWM2 = 6
+EN02 = 8
+EN12 = 9
+
 DIR6 = 31
-PWM6 = 32
+PWM6 = 23
+EN06 = 30
+EN16 = 29
 
 #-------------OTHER DEVICES------------------#
 GYRO = 10 #chip select
