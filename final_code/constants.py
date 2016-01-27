@@ -1,3 +1,7 @@
+###################SWITCHES#####################
+# START = 
+# GAME_COLOR = 
+
 ###################COLORS#####################
 NOBLOCK = -1
 RED = 0
@@ -30,7 +34,7 @@ LONG4 = 13 #A13
 SHORT4 = 12 #A12
 LONG5 = 11 #A11
 SHORT5 = 10 #A10
-THRESHOLD = 8
+THRESHOLD = 8 #Centimeters
 
 #---------WHEEL MOTORS AND ENCODER-----------#
 DIR1 = 2

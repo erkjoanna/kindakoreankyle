@@ -33,7 +33,12 @@ class Movement (SyncedSketch):
     global most_recent_distance
 
     def setup(self):
-        #setting up the gyro and two motors
+
+        # Switches to start the game.
+        self.start_switch = DigitalInput(self.tamp, START)
+        self.game_color_switch = DigitalInput(self.tamp, GAME_COLOR)
+
+        # Gyro & Encoders
         self.gyro = Gyro(self.tamp, GYRO, integrate = True)
         self.encoder1 = Encoder(self.tamp, EN01, EN11, continuous=True)
         self.encoder2 = Encoder(self.tamp, EN02, EN12, continuous=True)
@@ -47,21 +52,22 @@ class Movement (SyncedSketch):
         self.motor3 = Motor(self.tamp, 21, 4)
         self.motor5 = Motor(self.tamp, 22, 5)
 
-        # Slapper
+        # Slapper Motor
         self.motor6 = Motor(self.tamp, DIR6, PWM6)
 
-        #initializing angle and distance
+        # Initializing angle and distance
         self.angle = 0
         self.distance = 0
 
-        #setting motor orientations (for fun)
+        # Initializing motor direction and power
         self.motor1.write(1,0) #1 is forward for Motor 1
         self.motor2.write(0,0) #0 is forward for Motor 2
 
+        # Powering the brush motors
         # self.motor3.write(0,75)
         # self.motor5.write(0,75)
 
-        # #setting up ir sensors
+        # IR Sensors
         self.short0 = AnalogInput(self.tamp, SHORT0)
         self.short1 = AnalogInput(self.tamp, SHORT1)
         self.short2 = AnalogInput(self.tamp, SHORT2)
@@ -75,7 +81,6 @@ class Movement (SyncedSketch):
         self.long4 = AnalogInput(self.tamp, LONG4)
         self.long5 = AnalogInput(self.tamp, LONG5)
 
-        # Initializing list to hold IR sensors
         self.ir_sensors = []
         self.ir_sensors.append((self.short0, self.long0))
         self.ir_sensors.append((self.short1, self.long1))
@@ -88,24 +93,25 @@ class Movement (SyncedSketch):
 
         self.ir_count = 0
 
+        # Timers
         self.main_timer = Timer() # setting the timer for wall avoidance
         self.gyro_timer = Timer() # setting the timer for turning
         self.game_timer = Timer() # setting the timer for the servo
 
-        # setting up the servos
+        # Servos
         self.red_servo = Servo(self.tamp, PWM7)
         self.green_servo = Servo(self.tamp, PWM8)
         self.servos = [self.red_servo, self.green_servo]
 
-        #setting up the color sensor
+        # Color Sensor
         self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
 
-        #robot movement variables
+        # Robot Movement Variables
         self.state = CALCULATING
         self.stuck = NOT_STUCK
         self.starting_angle = self.gyro.val     
         
-        #flapper variables
+        # Flapper Variables
         self.detected_color = NOBLOCK
         self.color_count = 0
         self.desired_color_count = 2 #want to read consecutive readings to ascertain color
@@ -113,96 +119,101 @@ class Movement (SyncedSketch):
         self.finding = False
 
     def loop(self):
-        # print self.main_timer.millis()
-        #IR Sensor Readings
-        self.check_ir_sensors()
 
-        # After 3 minutes
-        if self.game_timer.millis() > 179000:
+        # Check for start switch
+        if (self.start_switch):            
 
-            print "Game Over!"
-            self.servos[our_color].write(1050)
+            # After almost 3 minutes
+            if self.game_timer.millis() > 170000:
 
+                print "Game Over!"
+                # Stop the motors.
+                self.motor1.write(1,0)
+                self.motor2.write(0,0)
 
-        if self.main_timer.millis() > 100:
-
-            self.main_timer.reset()
-
-            # Color sorting blocks
-            # self.color_sorting()
-
-            # Check IR Sensors
-            if self.game_timer.millis() > 10000:
-
-                self.check_ir_sensors()
-
-        
-        if self.state == CALCULATING:
-
-            ###VISION###
-            angle = most_recent_angle
-            distance = most_recent_distance
-
-            # Vision does not see any color, rotate in place.
-            if angle == None and distance == None:
-                self.angle = 360
-                self.finding = True
-
-            self.starting_angle = self.gyro.val
-            self.state = TURNING
-
-            ###ENCODERS###
-
-        elif self.state == TURNING:
-            if (self.stuck == STUCK):
-
-                # Rotate if stuck until we're out of UNSTUCK state.
-                print "TURNING STUCK"
-                self.angle = 90
-
-                self.motor1.write(0, 25)
-                self.motor2.write(0, 25)
+                # Spin servo of the game color tower.
+                self.servos[self.game_color_switch.val].write(1050)
 
 
+            if self.main_timer.millis() > 100:
 
-            else:
-                print "TURNING NOT STUCK"
-                #take a snapshot of the current gyro number
+                self.main_timer.reset()
 
-                #while the robot hasn't turned desired degrees yet
-                if self.gyro_timer.millis()>100:
-                    #print "starting_angle: ", self.starting_angle #check.
-                    print "difference: ",(self.gyro.val)-self.starting_angle
-                    self.gyro_timer.reset()
-                    if self.angle > 0:
-                        self.motor1.write(0,30)
-                        self.motor2.write(0,30)
-                        if self.finding and most_recent_angle:
-                            self.state = CALCULATING
-                            return
-                        if ((self.gyro.val) - self.starting_angle) > self.angle:
-                            self.state = MOVING        
-                    elif self.angle < 0:
-                        self.motor1.write(1,30)
-                        self.motor2.write(1,30)
-                        if self.finding and most_recent_angle:
-                            self.state = CALCULATING
-                            return
-                        if ((self.gyro.val) - self.starting_angle) < self.angle:
-                            self.state = MOVING
-                    else:
-                        self.state = MOVING
+                # Color sorting blocks
+                # self.color_sorting()
 
-        elif self.state == MOVING:
+                # Check IR Sensors
+                if self.game_timer.millis() > 10000:
 
-            print "MOVING"
-            #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-            self.motor1.write(0,40)
-            self.motor2.write(1,40) 
+                    self.check_ir_sensors()
+
             
-            if self.gyro_timer.millis() > 3000:            
-                self.state = CALCULATING
-                self.gyro_timer.reset()
+            if self.state == CALCULATING:
+
+                ###VISION###
+                angle = most_recent_angle
+                distance = most_recent_distance
+
+                # Vision does not see any color, rotate in place.
+                if angle == None and distance == None:
+                    self.angle = 360
+                    self.finding = True
+
+                self.starting_angle = self.gyro.val
+                self.state = TURNING
+
+                ###ENCODERS###
+
+            elif self.state == TURNING:
+                if (self.stuck == STUCK):
+
+                    # Rotate if stuck until we're out of UNSTUCK state.
+                    print "TURNING STUCK"
+                    self.angle = 90
+
+                    self.motor1.write(0, 25)
+                    self.motor2.write(0, 25)
+
+
+
+                else:
+                    print "TURNING NOT STUCK"
+                    #take a snapshot of the current gyro number
+
+                    #while the robot hasn't turned desired degrees yet
+                    if self.gyro_timer.millis()>100:
+                        #print "starting_angle: ", self.starting_angle #check.
+                        print "difference: ",(self.gyro.val)-self.starting_angle
+                        self.gyro_timer.reset()
+                        if self.angle > 0:
+                            self.motor1.write(0,30)
+                            self.motor2.write(0,30)
+                            if self.finding and most_recent_angle:
+                                self.state = CALCULATING
+                                return
+                            if ((self.gyro.val) - self.starting_angle) > self.angle:
+                                self.state = MOVING        
+                        elif self.angle < 0:
+                            self.motor1.write(1,30)
+                            self.motor2.write(1,30)
+                            if self.finding and most_recent_angle:
+                                self.state = CALCULATING
+                                return
+                            if ((self.gyro.val) - self.starting_angle) < self.angle:
+                                self.state = MOVING
+                        else:
+                            self.state = MOVING
+
+            elif self.state == MOVING:
+
+                print "MOVING"
+                #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
+                self.motor1.write(0,40)
+                self.motor2.write(1,40) 
+                
+                if self.gyro_timer.millis() > 3000:            
+                    self.state = CALCULATING
+                    self.gyro_timer.reset()
 
 
     def color_sorting(self):
