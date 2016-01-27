@@ -44,9 +44,10 @@ EN02 = 8
 EN12 = 9
 
 DIR6 = 31
-PWM6 = 23
+PWM6 = 32
 EN06 = 30
 EN16 = 29
+
 
 #-------------OTHER DEVICES------------------#
 GYRO = 10 #chip select
@@ -54,6 +55,8 @@ GYRO = 10 #chip select
 #GYRO_OUT = 12 #MISO
 #COLOR_SENSOR_SCL = 19 #these are already defined in original adafruit library because only 1 pair of scl/sda channels
 #COLOR_SENSOR_SDA = 18
+COLOR_LED = 26
+START_PIN = 25
 
 PWM7 = 21 # Servo PWM for Red
 PWM8 = 20 # Servo PWM for Green

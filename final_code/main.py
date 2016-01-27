@@ -1,14 +1,14 @@
 import sys
 from signal import *
 from tamproxy import Sketch, SyncedSketch, Timer
-from tamproxy.devices import Gyro, Motor, Color, Encoder, AnalogInput, Servo
+from tamproxy.devices import Gyro, Motor, Color, Encoder, AnalogInput, Servo, DigitalInput
 from constants import *
 from threading import Thread
 from vision import *
 from ir_sensor_helpers import *
 
 camera = None
-our_color = RED
+our_color = None
 most_recent_angle = 0
 most_recent_distance = 0
 
@@ -34,6 +34,10 @@ class Movement (SyncedSketch):
     global most_recent_distance
 
     def setup(self):
+        #setup color
+        self.color_led = DigitalInput(self.tamp, COLOR_LED)
+        our_color = self.color_led.val
+
         #setting up the gyro and two motors
         self.gyro = Gyro(self.tamp, GYRO, integrate = True)
         self.encoder1 = Encoder(self.tamp, EN01, EN11, continuous=True)
@@ -43,26 +47,19 @@ class Movement (SyncedSketch):
         # Wheel Motors
         self.motor1 = Motor(self.tamp, DIR1, PWM1)
         self.motor2 = Motor(self.tamp, DIR2, PWM2)
-
-        # Brush Motors
-        self.motor3 = Motor(self.tamp, 21, 4)
-        self.motor5 = Motor(self.tamp, 22, 5)
-
-        # Slapper
         self.motor6 = Motor(self.tamp, DIR6, PWM6)
 
         #initializing angle and distance
         self.angle = 0
         self.distance = 0
 
-        #setting motor orientations (for fun)
-        self.motor1.write(1,0) #1 is forward for Motor 1
-        self.motor2.write(0,0) #0 is forward for Motor 2
+        # Brush Motors
+        self.motor3 = Motor(self.tamp, 21, 4)
+        self.motor5 = Motor(self.tamp, 22, 5)
+        self.motor3.write(0, 75)
+        self.motor5.write(0, 75)
 
-        # self.motor3.write(0,75)
-        # self.motor5.write(0,75)
-
-        # #setting up ir sensors
+        #setting up ir sensors
         self.short0 = AnalogInput(self.tamp, SHORT0)
         self.short1 = AnalogInput(self.tamp, SHORT1)
         self.short2 = AnalogInput(self.tamp, SHORT2)
@@ -106,26 +103,26 @@ class Movement (SyncedSketch):
         #robot movement variables
         self.state = CALCULATING
         self.stuck = NOT_STUCK
-        self.starting_angle = self.gyro.val     
+        self.starting_angle = self.gyro.val
+        self.finding = False
         
         #flapper variables
+        self.found_block = False
+        self.encoder_initial = 0
         self.detected_color = NOBLOCK
         self.color_count = 0
         self.desired_color_count = 2 #want to read consecutive readings to ascertain color
-
-        self.finding = False
+        self.last_angle = 0
 
     def loop(self):
 
         # After 3 minutes
         if self.game_timer.millis() > 179000:
-
             print "Game Over!"
             self.servos[our_color].write(1050)
 
 
         if self.main_timer.millis() > 100:
-
             self.main_timer.reset()
 
             # Color sorting blocks
@@ -133,7 +130,6 @@ class Movement (SyncedSketch):
 
             # Check IR Sensors
             if self.game_timer.millis() > 500:
-
                 self.check_ir_sensors()
 
         
@@ -156,7 +152,6 @@ class Movement (SyncedSketch):
 
         elif self.state == TURNING:
             # print "TURNING"
-
             if (self.stuck == STUCK):
 
                 # Rotate if stuck until we're out of UNSTUCK state.
@@ -207,30 +202,43 @@ class Movement (SyncedSketch):
 
 
     def color_sorting(self):
-        if (self.color.r > 1.3 * self.color.g and self.color.r > 1.3 * self.color.b):
-            if self.detected_color == RED:
-                self.color_count = self.color_count + 1
-            else:
-                self.detected_color = RED
-                self.color_count = 0
-        elif (self.color.g > COLOR_CHECK * self.color.r and self.color.g > COLOR_CHECK * self.color.b):
-            if self.detected_color == GREEN:
-                self.color_count = self.color_count + 1
-            else:
-                self.detected_color = GREEN
-                self.color_count = 0
-
-        if not self.detected_color == NOBLOCK and self.color_count > 5:
-            #decide the appropriate place to move slapper
-            print "color is", self.detected_color
-            self.motor6.write(self.detected_color, 20)
-            encoder_initial = self.encoder6.val
+        if self.found_block:
             sign = 1-2*self.detected_color
-            # while (sign*(self.encoder6.val - encoder_initial) < 3200):
-                # continue
-            self.motor6.write(self.detected_color,0)
-            self.detected_color = NOBLOCK
-            self.color_count = 0
+            if (sign*(self.encoder6.val - self.encoder_initial) < 3200):
+                print sign*(self.encoder6.val - self.encoder_initial)
+                if (sign*(self.encoder6.val - self.last_angle)) < 5:
+                    self.speed += 1
+                    self.motor6.write(self.detected_color, 12 + self.speed)
+                    print 12+self.speed
+                else:
+                    self.motor6.write(self.detected_color, 12)
+
+            else:
+                self.motor6.write(self.detected_color,0)
+                self.detected_color = NOBLOCK
+                self.count = 0
+                self.found_block = False
+            self.last_angle = self.encoder6.val
+        else:
+            print self.color.r, self.color.g, self.color.b
+            if (self.color.r > 1.7 * self.color.g and self.color.r > 1.7 * self.color.b):
+                if self.detected_color == RED:
+                    self.count = self.count + 1
+                else:
+                    self.detected_color = RED
+                    self.count = 0
+            elif (self.color.g > COLOR_CHECK * self.color.r and self.color.g > COLOR_CHECK * self.color.b):
+                if self.detected_color == GREEN:
+                    self.count = self.count + 1
+                else:
+                    self.detected_color = GREEN
+                    self.count = 0
+
+            if not self.detected_color == NOBLOCK and self.count > 5:
+                print "color is", self.detected_color
+                self.encoder_initial = self.encoder6.val
+                self.found_block = True
+                self.speed = 0
 
     def check_ir_sensors(self):
         # Get the sensor readings and find the distances
@@ -306,7 +314,7 @@ if __name__ == "__main__":
     thread_vision.daemon = True
     thread_vision.start()
 
-    sketch = Movement(3,-0.00001, 100)
+    sketch = Movement(12,-0.00001, 100)
     sketch.run()
    
     for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
