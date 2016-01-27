@@ -1,7 +1,7 @@
 import sys
 from signal import *
 from tamproxy import Sketch, SyncedSketch, Timer
-from tamproxy.devices import Gyro, Motor, Color, Encoder
+from tamproxy.devices import Gyro, Motor, Color, Encoder, AnalogInput, Servo
 from constants import *
 from threading import Thread
 from vision import *
@@ -38,10 +38,16 @@ class Movement (SyncedSketch):
         self.encoder1 = Encoder(self.tamp, EN01, EN11, continuous=True)
         self.encoder2 = Encoder(self.tamp, EN02, EN12, continuous=True)
         self.encoder6 = Encoder(self.tamp, EN06, EN16, continuous=True)
+
+        # Wheel Motors
         self.motor1 = Motor(self.tamp, DIR1, PWM1)
         self.motor2 = Motor(self.tamp, DIR2, PWM2)
+
+        # Brush Motors
         self.motor3 = Motor(self.tamp, 21, 4)
         self.motor5 = Motor(self.tamp, 22, 5)
+
+        # Slapper
         self.motor6 = Motor(self.tamp, DIR6, PWM6)
 
         #initializing angle and distance
@@ -51,38 +57,45 @@ class Movement (SyncedSketch):
         #setting motor orientations (for fun)
         self.motor1.write(1,0) #1 is forward for Motor 1
         self.motor2.write(0,0) #0 is forward for Motor 2
-        self.motor3.write(0,75)
-        self.motor5.write(0,75)
 
-        self.gyro_timer = Timer() #setting the timer for turning
+        # self.motor3.write(0,75)
+        # self.motor5.write(0,75)
 
         # #setting up ir sensors
-        # self.short0 = AnalogInput(self.tamp, SHORT0)
-        # self.short1 = AnalogInput(self.tamp, SHORT1)
-        # self.short2 = AnalogInput(self.tamp, SHORT2)
-        # self.short3 = AnalogInput(self.tamp, SHORT3)
-        # self.short4 = AnalogInput(self.tamp, SHORT4)
-        # self.short5 = AnalogInput(self.tamp, SHORT5)
-        # self.long0 = AnalogInput(self.tamp, LONG0)
-        # self.long1 = AnalogInput(self.tamp, LONG1)
-        # self.long2 = AnalogInput(self.tamp, LONG2)
-        # self.long3 = AnalogInput(self.tamp, LONG3)
-        # self.long4 = AnalogInput(self.tamp, LONG4)
-        # self.long5 = AnalogInput(self.tamp, LONG5)
+        self.short0 = AnalogInput(self.tamp, SHORT0)
+        self.short1 = AnalogInput(self.tamp, SHORT1)
+        self.short2 = AnalogInput(self.tamp, SHORT2)
+        self.short3 = AnalogInput(self.tamp, SHORT3)
+        self.short4 = AnalogInput(self.tamp, SHORT4)
+        self.short5 = AnalogInput(self.tamp, SHORT5)
+        self.long0 = AnalogInput(self.tamp, LONG0)
+        self.long1 = AnalogInput(self.tamp, LONG1)
+        self.long2 = AnalogInput(self.tamp, LONG2)
+        self.long3 = AnalogInput(self.tamp, LONG3)
+        self.long4 = AnalogInput(self.tamp, LONG4)
+        self.long5 = AnalogInput(self.tamp, LONG5)
 
-        # # Initializing list to hold IR sensors
-        # self.ir_sensors = []
-        # self.ir_sensors.append((self.short0, self.long0))
-        # self.ir_sensors.append((self.short1, self.long1))
-        # self.ir_sensors.append((self.short2, self.long2))
-        # self.ir_sensors.append((self.short3, self.long3))
-        # self.ir_sensors.append((self.short4, self.long4))
-        # self.ir_sensors.append((self.short5, self.long5))
+        # Initializing list to hold IR sensors
+        self.ir_sensors = []
+        self.ir_sensors.append((self.short0, self.long0))
+        self.ir_sensors.append((self.short1, self.long1))
+        self.ir_sensors.append((self.short2, self.long2))
+        self.ir_sensors.append((self.short3, self.long3))
+        self.ir_sensors.append((self.short4, self.long4))
+        self.ir_sensors.append((self.short5, self.long5))
 
-        # self.ir_readings = [(0,0)] * 6 # readings are formatted as (short, long)
+        self.ir_readings = [(0,0)] * 6 # readings are formatted as (short, long)
+
+        self.ir_count = 0
 
         self.main_timer = Timer() # setting the timer for wall avoidance
+        self.gyro_timer = Timer() # setting the timer for turning
+        self.game_timer = Timer() # setting the timer for the servo
 
+        # setting up the servos
+        self.red_servo = Servo(self.tamp, PWM7)
+        self.green_servo = Servo(self.tamp, PWM8)
+        self.servos = [self.red_servo, self.green_servo]
 
         #setting up the color sensor
         self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
@@ -102,15 +115,26 @@ class Movement (SyncedSketch):
     def loop(self):
         # print self.main_timer.millis()
         #IR Sensor Readings
+        self.check_ir_sensors()
+
+        # After 3 minutes
+        if self.game_timer.millis() > 179000:
+
+            print "Game Over!"
+            self.servos[our_color].write(1050)
+
+
         if self.main_timer.millis() > 100:
 
             self.main_timer.reset()
 
             # Color sorting blocks
-            self.color_sorting()
+            # self.color_sorting()
 
             # Check IR Sensors
-            # self.check_ir_sensor  AQSZs()
+            if self.game_timer.millis() > 10000:
+
+                self.check_ir_sensors()
 
         
         if self.state == CALCULATING:
@@ -133,13 +157,16 @@ class Movement (SyncedSketch):
             if (self.stuck == STUCK):
 
                 # Rotate if stuck until we're out of UNSTUCK state.
+                print "TURNING STUCK"
                 self.angle = 90
 
-                self.motor1.write(0, 10)
-                self.motor2.write(0, 10)
+                self.motor1.write(0, 25)
+                self.motor2.write(0, 25)
+
+
 
             else:
-
+                print "TURNING NOT STUCK"
                 #take a snapshot of the current gyro number
 
                 #while the robot hasn't turned desired degrees yet
@@ -150,7 +177,7 @@ class Movement (SyncedSketch):
                     if self.angle > 0:
                         self.motor1.write(0,30)
                         self.motor2.write(0,30)
-                        if finding and most_recent_angle:
+                        if self.finding and most_recent_angle:
                             self.state = CALCULATING
                             return
                         if ((self.gyro.val) - self.starting_angle) > self.angle:
@@ -158,7 +185,7 @@ class Movement (SyncedSketch):
                     elif self.angle < 0:
                         self.motor1.write(1,30)
                         self.motor2.write(1,30)
-                        if finding and most_recent_angle:
+                        if self.finding and most_recent_angle:
                             self.state = CALCULATING
                             return
                         if ((self.gyro.val) - self.starting_angle) < self.angle:
@@ -167,6 +194,8 @@ class Movement (SyncedSketch):
                         self.state = MOVING
 
         elif self.state == MOVING:
+
+            print "MOVING"
             #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
             self.motor1.write(0,40)
             self.motor2.write(1,40) 
@@ -179,18 +208,18 @@ class Movement (SyncedSketch):
     def color_sorting(self):
         if (self.color.r > 1.3 * self.color.g and self.color.r > 1.3 * self.color.b):
             if self.detected_color == RED:
-                self.count = self.count + 1
+                self.color_count = self.color_count + 1
             else:
                 self.detected_color = RED
-                self.count = 0
+                self.color_count = 0
         elif (self.color.g > COLOR_CHECK * self.color.r and self.color.g > COLOR_CHECK * self.color.b):
             if self.detected_color == GREEN:
-                self.count = self.count + 1
+                self.color_count = self.color_count + 1
             else:
                 self.detected_color = GREEN
-                self.count = 0
+                self.color_count = 0
 
-        if not self.detected_color == NOBLOCK and self.count > 5:
+        if not self.detected_color == NOBLOCK and self.color_count > 5:
             #decide the appropriate place to move slapper
             print "color is", self.detected_color
             self.motor6.write(self.detected_color, 20)
@@ -200,15 +229,17 @@ class Movement (SyncedSketch):
                 # continue
             self.motor6.write(self.detected_color,0)
             self.detected_color = NOBLOCK
-            self.count = 0
+            self.color_count = 0
 
     def check_ir_sensors(self):
         # Get the sensor readings and find the distances
+
         for i in xrange(len(self.ir_readings)):
             short_ir_reading = self.ir_sensors[i][0].val / 1000.0
             long_ir_reading = self.ir_sensors[i][1].val / 1000.0
 
             self.ir_readings[i] = voltage_to_distance(short_ir_reading, long_ir_reading)
+
 
         sensors_too_close = []
 
@@ -222,22 +253,31 @@ class Movement (SyncedSketch):
         # It is stuck if sensors 0, 1, 2 or 0, 4, 5 are < THRESHOLD
 
         too_close_count_1 = 0
-        for i in [i in sensors_too_close for i in STUCK_SENSORS_1]:
-            if i:
+        too_close_count_2 = 0
+
+        for i in sensors_too_close:
+            if (i in STUCK_SENSORS_1):
                 too_close_count_1 += 1
 
-        too_close_count_2 = 0
-        for i in [i in sensors_too_close for i in STUCK_SENSORS_2]:
-            if i:
+            if (i in STUCK_SENSORS_2):
                 too_close_count_2 += 1
 
         # Stuck! (Robot is too close to walls and vision sees no color.)
-        if (too_close_count_1 >= 3 or too_close_count_2 >= 3) and self.angle == None:
-            self.stuck == STUCK
-            self.state = TURNING
+        if (too_close_count_1 >= 3 or too_close_count_2 >= 3):
+            # TODO: and self.angle == None ^^^^
 
+            self.ir_count += 1
+
+            if self.ir_count == 3:
+
+                self.stuck = STUCK
+                self.state = TURNING
+                self.ir_count = 0
+
+            else:
+                self.stuck = NOT_STUCK
         else:
-            self.stuck == UNSTUCK
+            self.stuck = NOT_STUCK
 
 if __name__ == "__main__":
 

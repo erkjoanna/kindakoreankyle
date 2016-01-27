@@ -13,7 +13,6 @@ def voltage_to_distance(short_ir_v, long_ir_v):
 
 	if (short_d == -1):
 		# Distance is less than 3cm
-		print "Distance is less than 3cm."
 		return (None, None)
 	elif (long_d == -1):
 		# Distance is between 3cm and 10cm
@@ -26,7 +25,9 @@ def voltage_to_distance(short_ir_v, long_ir_v):
 Returns distance given Short IR Sensor's voltage reading
 '''
 def short_ir_distance(v):
-	# inv_voltage = 0.00565114114 * distance -0.008073087974
+	if v == 0:
+		return -1
+
 	inv_voltage = 1/v
 	distance = (inv_voltage - 0.008073087974) / 0.00565114114
 
@@ -40,15 +41,19 @@ def short_ir_distance(v):
 Returns distance given Long IR Sensor's voltage reading
 '''
 def long_ir_distance(v):
-	inv_voltage = 1/v
 
-	# y = 0.01359225304*x + 0.1238025628
-	# inv_voltage = 0.01359225304 * distance + 0.1238025628
-	distance = (inv_voltage - 0.1238025628) / 0.01359225304
+	if v == 0:
+		return -1
+
+	inv_voltage = 1 / v
+
+	# y = 0.0012214883*x -0.003449589563
+	# inv_voltage = 0.0012214883 * distance - 0.003449589563
+	distance = (inv_voltage + 0.003449589563) / 0.0012214883
 
 	# inv_voltage = -0.6872953134 * distance + 9.326933936
 	# Distances less than 15cm are wack on Long IR
-	if inv_voltage < 0.302278:
+	if inv_voltage < 0.024:
 		return -1
 	else:
 		return distance
