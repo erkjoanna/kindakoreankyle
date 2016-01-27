@@ -142,10 +142,11 @@ angle - the angle the robot to turn at. Middle is 0 degrees.
 distance - the distance the robot should move forward.
 '''
 def vision(camera, color):
-	# time.sleep(1)
+	time.sleep(1)
     
 	# Take the actual image we want to keep
 	_, camera_capture = camera.read()
+
 
 	img = scipy.misc.imresize(camera_capture, 0.25)
 
@@ -174,9 +175,7 @@ def vision(camera, color):
 	if final_avg_x == None and final_avg_y == None:
 		return (None, None)
 
-	img[final_avg_y][final_avg_x] = np.array([255, 0, 0], dtype=np.uint8)
-
-	cv2.imwrite("img_with_average.png", img)
+	img[final_avg_y][final_avg_x] = np.array([0, 0, 255], dtype=np.uint8)
 
 	# Calculating angle and distance
 

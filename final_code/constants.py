@@ -13,24 +13,24 @@ BACKING_OFF = 3
 NOT_STUCK = 0
 STUCK = 1
 STUCK_SENSORS_1 = [0, 1, 2]
-STUCK_SENSORS_2 = [0, 4, 5]
+STUCK_SENSORS_2 = [4, 5, 6]
 
 ####################PINS######################
 #----------------IR SENSORS------------------#
 # Clockwise every 60 degrees from the front
 LONG0 = 22 
-SHORT0 = 23 
+SHORT0 = 27 #23 
 LONG1 = 16 
 SHORT1 = 17 
 LONG2 = 14
 SHORT2 = 15
 LONG3 = 28
-SHORT3 = 27
+# SHORT3 = 27
 LONG4 = 13 #A13
 SHORT4 = 12 #A12
 LONG5 = 11 #A11
 SHORT5 = 10 #A10
-THRESHOLD = 8
+THRESHOLD = 12
 
 #---------WHEEL MOTORS AND ENCODER-----------#
 DIR1 = 2

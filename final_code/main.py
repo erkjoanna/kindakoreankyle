@@ -8,7 +8,7 @@ from vision import *
 from ir_sensor_helpers import *
 
 camera = None
-our_color = GREEN
+our_color = RED
 most_recent_angle = 0
 most_recent_distance = 0
 
@@ -18,6 +18,7 @@ def vision_thread(camera):
     global most_recent_distance
 
     while True:
+       print "hi"
        most_recent_angle, most_recent_distance = vision(camera, our_color)
        print most_recent_angle, most_recent_distance
 
@@ -65,7 +66,7 @@ class Movement (SyncedSketch):
         self.short0 = AnalogInput(self.tamp, SHORT0)
         self.short1 = AnalogInput(self.tamp, SHORT1)
         self.short2 = AnalogInput(self.tamp, SHORT2)
-        self.short3 = AnalogInput(self.tamp, SHORT3)
+        self.short3 = AnalogInput(self.tamp, SHORT0)
         self.short4 = AnalogInput(self.tamp, SHORT4)
         self.short5 = AnalogInput(self.tamp, SHORT5)
         self.long0 = AnalogInput(self.tamp, LONG0)
@@ -77,14 +78,16 @@ class Movement (SyncedSketch):
 
         # Initializing list to hold IR sensors
         self.ir_sensors = []
-        self.ir_sensors.append((self.short0, self.long0))
-        self.ir_sensors.append((self.short1, self.long1))
-        self.ir_sensors.append((self.short2, self.long2))
-        self.ir_sensors.append((self.short3, self.long3))
-        self.ir_sensors.append((self.short4, self.long4))
-        self.ir_sensors.append((self.short5, self.long5))
+        self.ir_sensors.append(self.short0)
+        self.ir_sensors.append(self.long1)
+        self.ir_sensors.append(self.long2)
+        self.ir_sensors.append(self.short3)
+        self.ir_sensors.append(self.short4)
+        self.ir_sensors.append(self.short5)
+        self.ir_sensors.append(self.long0)
 
-        self.ir_readings = [(0,0)] * 6 # readings are formatted as (short, long)
+
+        self.ir_readings = [0] * 6 # readings are formatted as (short, long)
 
         self.ir_count = 0
 
@@ -93,12 +96,12 @@ class Movement (SyncedSketch):
         self.game_timer = Timer() # setting the timer for the servo
 
         # setting up the servos
-        self.red_servo = Servo(self.tamp, PWM7)
-        self.green_servo = Servo(self.tamp, PWM8)
+        self.green_servo = Servo(self.tamp, PWM7)
+        self.red_servo = Servo(self.tamp, PWM8)
         self.servos = [self.red_servo, self.green_servo]
 
         #setting up the color sensor
-        self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
+        # self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
 
         #robot movement variables
         self.state = CALCULATING
@@ -113,9 +116,6 @@ class Movement (SyncedSketch):
         self.finding = False
 
     def loop(self):
-        # print self.main_timer.millis()
-        #IR Sensor Readings
-        self.check_ir_sensors()
 
         # After 3 minutes
         if self.game_timer.millis() > 179000:
@@ -132,12 +132,13 @@ class Movement (SyncedSketch):
             # self.color_sorting()
 
             # Check IR Sensors
-            if self.game_timer.millis() > 10000:
+            if self.game_timer.millis() > 500:
 
                 self.check_ir_sensors()
 
         
         if self.state == CALCULATING:
+            # print "CALCULATING"
 
             ###VISION###
             angle = most_recent_angle
@@ -154,25 +155,25 @@ class Movement (SyncedSketch):
             ###ENCODERS###
 
         elif self.state == TURNING:
+            # print "TURNING"
+
             if (self.stuck == STUCK):
 
                 # Rotate if stuck until we're out of UNSTUCK state.
-                print "TURNING STUCK"
+                # print "TURNING STUCK"
                 self.angle = 90
 
-                self.motor1.write(0, 25)
-                self.motor2.write(0, 25)
-
-
+                self.motor1.write(0, 20)
+                self.motor2.write(0, 20)
 
             else:
-                print "TURNING NOT STUCK"
+                # print "TURNING NOT STUCK"
                 #take a snapshot of the current gyro number
 
                 #while the robot hasn't turned desired degrees yet
                 if self.gyro_timer.millis()>100:
                     #print "starting_angle: ", self.starting_angle #check.
-                    print "difference: ",(self.gyro.val)-self.starting_angle
+                    # print "difference: ",(self.gyro.val)-self.starting_angle
                     self.gyro_timer.reset()
                     if self.angle > 0:
                         self.motor1.write(0,30)
@@ -195,10 +196,10 @@ class Movement (SyncedSketch):
 
         elif self.state == MOVING:
 
-            print "MOVING"
+            # print "MOVING"
             #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-            self.motor1.write(0,40)
-            self.motor2.write(1,40) 
+            self.motor1.write(0,25)
+            self.motor2.write(1,25) 
             
             if self.gyro_timer.millis() > 3000:            
                 self.state = CALCULATING
@@ -235,23 +236,27 @@ class Movement (SyncedSketch):
         # Get the sensor readings and find the distances
 
         for i in xrange(len(self.ir_readings)):
-            short_ir_reading = self.ir_sensors[i][0].val / 1000.0
-            long_ir_reading = self.ir_sensors[i][1].val / 1000.0
+            ir_reading = self.ir_sensors[i].val / 1000.0
 
-            self.ir_readings[i] = voltage_to_distance(short_ir_reading, long_ir_reading)
+            self.ir_readings[i] = short_ir_distance(ir_reading)
 
 
         sensors_too_close = []
 
         # Check if the robot is too close to the walls.
         for i in xrange(len(self.ir_readings)):
-            short_ir, long_ir = self.ir_readings[i]
+            ir = self.ir_readings[i]
 
-            if (short_ir < THRESHOLD or long_ir < THRESHOLD):
+            if (ir < THRESHOLD):
+
+
                 sensors_too_close.append(i)
 
-        # It is stuck if sensors 0, 1, 2 or 0, 4, 5 are < THRESHOLD
 
+        # It is stuck if sensors 0, 1, 2 or 4, 5, 6 are < THRESHOLD
+
+
+        # See if the sensors that are too close are 0, 1, 2 or 0, 4, 5.
         too_close_count_1 = 0
         too_close_count_2 = 0
 
@@ -266,26 +271,40 @@ class Movement (SyncedSketch):
         if (too_close_count_1 >= 3 or too_close_count_2 >= 3):
             # TODO: and self.angle == None ^^^^
 
+            # Make sure we get a stuck reading 3 times before we declare it stuck.
             self.ir_count += 1
 
-            if self.ir_count == 3:
+            if self.ir_count >= 5:
 
+                # Stuck, and turning now. Reset the reading count.
                 self.stuck = STUCK
                 self.state = TURNING
                 self.ir_count = 0
-
-            else:
-                self.stuck = NOT_STUCK
         else:
+            self.ir_count = 0
             self.stuck = NOT_STUCK
+            # print "NOT STUCK"
+            self.state = CALCULATING
+            # print "STATE", self.state, "STUCK?", self.stuck
+            # self.state = MOVING
+
+
+        # print self.ir_count
+        # print "STATE", self.state, "STUCK?", self.stuck
+
+
+            # else:
+            #     self.stuck = NOT_STUCK
+            #     print "STATE", self.state, "STUCK?", self.stuck
+
 
 if __name__ == "__main__":
 
-    # camera = setup_vision()
+    camera = setup_vision()
     
-    # thread_vision = Thread( target=vision_thread, args=(camera,))
-    # thread_vision.daemon = True
-    # thread_vision.start()
+    thread_vision = Thread( target=vision_thread, args=(camera,))
+    thread_vision.daemon = True
+    thread_vision.start()
 
     sketch = Movement(3,-0.00001, 100)
     sketch.run()
@@ -293,4 +312,4 @@ if __name__ == "__main__":
     for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
         signal(sig, set_end)
     
-    # time.sleep(10000)
+    time.sleep(10000)
