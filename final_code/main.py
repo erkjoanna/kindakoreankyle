@@ -52,20 +52,11 @@ class Movement (SyncedSketch):
         self.angle = 0
         self.distance = 0
 
-<<<<<<< HEAD
         # Brush Motors
         self.motor3 = Motor(self.tamp, 21, 4)
         self.motor5 = Motor(self.tamp, 22, 5)
         self.motor3.write(0, 75)
-        self.motor5.write(0, 75)
-=======
-        #setting motor orientations (for fun)
-        self.motor1.write(1,0) #1 is forward for Motor 1
-        self.motor2.write(0,0) #0 is forward for Motor 2
-
-        self.motor3.write(0,80)
-        self.motor5.write(0,100)
->>>>>>> self.angle not angle. move forward when not stuck
+        self.motor5.write(0, 100)
 
         #setting up ir sensors
         self.short0 = AnalogInput(self.tamp, SHORT0)
