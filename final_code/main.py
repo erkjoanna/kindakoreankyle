@@ -141,7 +141,7 @@ class Movement (SyncedSketch):
                 self.main_timer.reset()
 
                 # Color sorting blocks
-                self.color_sorting()
+                self.bitchslap()
 
                 # Check IR Sensors
                 if self.game_timer.millis() > 500:
@@ -224,7 +224,7 @@ class Movement (SyncedSketch):
                     self.state = CALCULATING
         
 
-    def color_sorting(self):
+    def bitchslap(self):
         base = 80
         if self.found_block:
             sign = 1-2*self.detected_color
