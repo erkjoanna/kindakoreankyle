@@ -173,6 +173,7 @@ def vision(camera, color):
 				img[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 
 	if final_avg_x == None and final_avg_y == None or largest_blob < 100:
+		print "asdf"
 		return (None, None)
 
 	img[final_avg_y][final_avg_x] = np.array([0, 0, 255], dtype=np.uint8)
