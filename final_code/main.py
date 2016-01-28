@@ -18,9 +18,7 @@ def vision_thread(camera):
     global most_recent_distance
 
     while True:
-       print "hi"
        most_recent_angle, most_recent_distance = vision(camera, our_color)
-       print most_recent_angle, most_recent_distance
 
 def set_end(*args):
     if camera:
@@ -54,11 +52,20 @@ class Movement (SyncedSketch):
         self.angle = 0
         self.distance = 0
 
+<<<<<<< HEAD
         # Brush Motors
         self.motor3 = Motor(self.tamp, 21, 4)
         self.motor5 = Motor(self.tamp, 22, 5)
         self.motor3.write(0, 75)
         self.motor5.write(0, 75)
+=======
+        #setting motor orientations (for fun)
+        self.motor1.write(1,0) #1 is forward for Motor 1
+        self.motor2.write(0,0) #0 is forward for Motor 2
+
+        self.motor3.write(0,80)
+        self.motor5.write(0,100)
+>>>>>>> self.angle not angle. move forward when not stuck
 
         #setting up ir sensors
         self.short0 = AnalogInput(self.tamp, SHORT0)
@@ -136,69 +143,70 @@ class Movement (SyncedSketch):
                 # Check IR Sensors
                 if self.game_timer.millis() > 500:
                     self.check_ir_sensors()
-
+                    
             
             if self.state == CALCULATING:
-                # print "CALCULATING"
-                    ###VISION###
-                    angle = most_recent_angle
-                    distance = most_recent_distance
 
-                    # Vision does not see any color, rotate in place.
-                    if angle == None and distance == None:
-                        self.angle = 360
-                        self.finding = True
+                ###VISION###
+                self.angle = most_recent_angle
+                self.distance = most_recent_distance
 
-                    self.starting_angle = self.gyro.val
+                self.starting_angle = self.gyro.val
+
+                # Vision does not see any color, rotate in place.
+                if self.angle == None and self.distance == None:
+                    self.finding = True
+                    self.state = MOVING
+                else:
                     self.state = TURNING
+
+                ###ENCODERS###
 
             elif self.state == TURNING:
                 # print "TURNING"
+
                 if (self.stuck == STUCK):
 
                     # Rotate if stuck until we're out of UNSTUCK state.
                     # print "TURNING STUCK"
-                    self.angle = 90
 
-                    self.motor1.write(0, 20)
-                    self.motor2.write(0, 20)
+                    self.motor1.write(0, 30)
+                    self.motor2.write(0, 30)
 
                 else:
-                    # print "TURNING NOT STUCK"
                     #take a snapshot of the current gyro number
 
                     #while the robot hasn't turned desired degrees yet
-                    if self.gyro_timer.millis()>100:
-                        #print "starting_angle: ", self.starting_angle #check.
-                        # print "difference: ",(self.gyro.val)-self.starting_angle
+                    if self.gyro_timer.millis() > 100:
+                        # print "starting_angle: ", self.starting_angle #check.
+                        print "difference: ",(self.gyro.val)-self.starting_angle
+                        print "self.angle: ", self.angle
                         self.gyro_timer.reset()
                         if self.angle > 0:
-                            self.motor1.write(0,30)
-                            self.motor2.write(0,30)
+                            self.motor1.write(0,25)
+                            self.motor2.write(0,25)
                             if self.finding and most_recent_angle:
                                 self.state = CALCULATING
                                 return
                             if ((self.gyro.val) - self.starting_angle) > self.angle:
-                                self.state = MOVING
+                                self.state = MOVING        
                         elif self.angle < 0:
-                            self.motor1.write(1,30)
-                            self.motor2.write(1,30)
+                            self.motor1.write(1,25)
+                            self.motor2.write(1,25)
                             if self.finding and most_recent_angle:
                                 self.state = CALCULATING
                                 return
                             if ((self.gyro.val) - self.starting_angle) < self.angle:
                                 self.state = MOVING
-                elif self.state == MOVING:
+                        else:
+                            self.state = MOVING
 
-                    # print "MOVING"
-                    #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-                    self.motor1.write(0,25)
-                    self.motor2.write(1,25) 
+            elif self.state == MOVING:
 
-                    if self.gyro_timer.millis() > 3000:
-                        self.state = CALCULATING
-                        self.gyro_timer.reset()
-
+                #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
+                self.motor1.write(0,40)
+                self.motor2.write(1,40) 
+            
 
     def color_sorting(self):
         base = 80
