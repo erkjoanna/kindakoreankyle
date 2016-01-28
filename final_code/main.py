@@ -8,7 +8,7 @@ from vision import *
 from ir_sensor_helpers import *
 
 camera = None
-our_color = None
+our_color = RED
 most_recent_angle = None
 most_recent_distance = None
 
@@ -27,15 +27,10 @@ def set_end(*args):
 
 class Movement (SyncedSketch):
 
-    global our_color
-    global most_recent_angle
-    global most_recent_distance
-
     def setup(self):
         #setup color
         self.start = DigitalInput(self.tamp, START_PIN)
         self.color_led = DigitalInput(self.tamp, COLOR_LED)
-        our_color = self.color_led.val
 
         #setting up the gyro and two motors
         self.gyro = Gyro(self.tamp, GYRO, integrate = True)
@@ -55,8 +50,8 @@ class Movement (SyncedSketch):
         # Brush Motors
         self.motor3 = Motor(self.tamp, 21, 4)
         self.motor5 = Motor(self.tamp, 22, 5)
-        # self.motor3.write(0, 75)
-        # self.motor5.write(0, 100)
+        self.motor3.write(0, 75)
+        self.motor5.write(0, 100)
 
         #setting up ir sensors
         self.short0 = AnalogInput(self.tamp, SHORT0)
@@ -116,6 +111,9 @@ class Movement (SyncedSketch):
         self.last_angle = 0
 
     def loop(self):
+    	global our_color
+    	global most_recent_angle
+    	global most_recent_distance
         if self.start.val:
             # start the game timer
             if not self.game_timer:
@@ -143,7 +141,7 @@ class Movement (SyncedSketch):
                     
             
             if self.state == CALCULATING:
-                print "calculating"
+                #print "calculating"
 
                 ###VISION###
                 self.angle = most_recent_angle
@@ -163,36 +161,36 @@ class Movement (SyncedSketch):
                 ###ENCODERS###
 
             elif self.state == TURNING:
-                print "TURNING"
-
+#                print "TURNING"
+		const = 24
                 if (self.stuck == STUCK):
 
                     # Rotate if stuck until we're out of UNSTUCK state.
-                    # print "TURNING STUCK"
+                    print "TURNING STUCK"
 
-                    self.motor1.write(0, 30)
-                    self.motor2.write(0, 30)
+                #    self.motor1.write(0, 30)
+                 #   self.motor2.write(0, 30)
 
                 else:
                     #take a snapshot of the current gyro number
 
                     #while the robot hasn't turned desired degrees yet
                     if self.gyro_timer.millis() > 100:
-                        # print "starting_angle: ", self.starting_angle #check.
+                        print "starting_angle: ", self.starting_angle #check.
                         print "difference: ",(self.gyro.val)-self.starting_angle
                         print "self.angle: ", self.angle
                         self.gyro_timer.reset()
                         if self.angle > 3:
-                            self.motor1.write(0,25)
-                            self.motor2.write(0,25)
+                            self.motor1.write(0,const)
+                            self.motor2.write(0,const)
                             if self.finding and most_recent_angle:
                                 self.state = CALCULATING
                                 return
                             if ((self.gyro.val) - self.starting_angle) > self.angle:
                                 self.state = MOVING        
                         elif self.angle < -3:
-                            self.motor1.write(1,25)
-                            self.motor2.write(1,25)
+                            self.motor1.write(1,const)
+                            self.motor2.write(1,const)
                             if self.finding and most_recent_angle:
                                 self.state = CALCULATING
                                 return
@@ -205,10 +203,10 @@ class Movement (SyncedSketch):
 
                 print "moving"
                 #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-                # self.motor1.write(0,30)
-                # self.motor2.write(1,30) 
+                self.motor1.write(0,90)
+                self.motor2.write(1,90) 
 
-                if self.gyro_timer.millis() > 100:
+                if self.gyro_timer.millis() > 1000:
                     self.gyro_timer.reset()
                     self.state = CALCULATING
         
@@ -323,11 +321,11 @@ class Movement (SyncedSketch):
 
 if __name__ == "__main__":
 
-    # camera = setup_vision()
+    camera = setup_vision()
     
-    # thread_vision = Thread( target=vision_thread, args=(camera,))
-    # thread_vision.daemon = True
-    # thread_vision.start()
+    thread_vision = Thread( target=vision_thread, args=(camera,))
+    thread_vision.daemon = True
+    thread_vision.start()
 
     sketch = Movement(12,-0.00001, 100)
     sketch.run()
