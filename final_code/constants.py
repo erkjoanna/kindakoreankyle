@@ -45,8 +45,8 @@ EN12 = 9
 
 DIR6 = 31
 PWM6 = 32
-EN06 = 30
-EN16 = 29
+EN06 = 33
+EN16 = 26
 
 
 #-------------OTHER DEVICES------------------#
@@ -62,10 +62,13 @@ PWM7 = 21 # Servo PWM for Red
 PWM8 = 20 # Servo PWM for Green
 
 ####################VISION######################
-#---------------CAMERA PORT-----------------#
 COMPUTER_CAM = 0
 WEB_CAM = 1
 RAMP_FRAMES = 30
-COLOR_CHECK = 1.1
+COLOR_CHECK_RED = 1.3
+COLOR_CHECK_GREEN = 1.1
+BLOB_MIN_SIZE = 750
+PIXEL_TO_CENTIMETERS = 0.06
+BLOB_SCALE_FACTOR = 500
 
 

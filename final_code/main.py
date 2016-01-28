@@ -8,7 +8,7 @@ from vision import *
 from ir_sensor_helpers import *
 
 camera = None
-our_color = RED
+our_color = None
 most_recent_angle = None
 most_recent_distance = None
 
@@ -19,6 +19,7 @@ def vision_thread(camera):
 
     while True:
        most_recent_angle, most_recent_distance = vision(camera, our_color)
+       # print most_recent_angle, most_recent_distance
 
 def set_end(*args):
     if camera:
@@ -78,7 +79,7 @@ class Movement (SyncedSketch):
         self.ir_sensors.append(self.long0)
 
 
-        self.ir_readings = [0] * 6 # readings are formatted as (short, long)
+        self.ir_readings = [0] * 7 # readings are formatted as (short, long)
 
         self.ir_count = 0
 
@@ -94,7 +95,7 @@ class Movement (SyncedSketch):
         self.servos[1].write(20)
 
         #setting up the color sensor
-        # self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
+        self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
 
         #robot movement variables
         self.state = CALCULATING
@@ -111,6 +112,7 @@ class Movement (SyncedSketch):
         self.last_angle = 0
 
     def loop(self):
+
     	global our_color
     	global most_recent_angle
     	global most_recent_distance
@@ -121,6 +123,12 @@ class Movement (SyncedSketch):
                 our_color = self.color_led.val #double check
                 self.servos[0].write(180)
                 self.servos[1].write(20)
+
+                camera = setup_vision()
+                
+                thread_vision = Thread( target=vision_thread, args=(camera,))
+                thread_vision.daemon = True
+                thread_vision.start()
 
             # After 3 minutes
             if self.game_timer.millis() > 179000:
@@ -133,10 +141,11 @@ class Movement (SyncedSketch):
                 self.main_timer.reset()
 
                 # Color sorting blocks
-                # self.color_sorting()
+                self.color_sorting()
 
                 # Check IR Sensors
                 if self.game_timer.millis() > 500:
+
                     self.check_ir_sensors()
                     
             
@@ -152,9 +161,6 @@ class Movement (SyncedSketch):
                 # Vision does not see any color, rotate in place.
                 if self.angle == None and self.distance == None:
                     self.finding = True
-                    # self.state = MOVING
-                # else:
-                    # self.state = TURNING
 
                 self.state = TURNING
 
@@ -162,7 +168,7 @@ class Movement (SyncedSketch):
 
             elif self.state == TURNING:
 #                print "TURNING"
-		const = 24
+		const = 25
                 if (self.stuck == STUCK):
 
                     # Rotate if stuck until we're out of UNSTUCK state.
@@ -176,11 +182,18 @@ class Movement (SyncedSketch):
 
                     #while the robot hasn't turned desired degrees yet
                     if self.gyro_timer.millis() > 100:
-                        print "starting_angle: ", self.starting_angle #check.
-                        print "difference: ",(self.gyro.val)-self.starting_angle
-                        print "self.angle: ", self.angle
+                        # print "starting_angle: ", self.starting_angle #check.
+                        # print "difference: ",(self.gyro.val)-self.starting_angle
+                        # print "self.angle: ", self.angle
                         self.gyro_timer.reset()
-                        if self.angle > 3:
+
+                        # if (self.gyro.val - self.starting_angle) < 5 and (self.cycle_timer.millis() > TURN_SECONDS):
+                        #     # TODO: Might need to test this with and instead of or.
+                        #     if self.ir_readings[0] > THRESHOLD or self.ir_readings[6] > THRESHOLD:
+                        #         self.state = MOVING
+                        #         return 
+
+                        if self.angle > 10:
                             self.motor1.write(0,const)
                             self.motor2.write(0,const)
                             if self.finding and most_recent_angle:
@@ -188,7 +201,7 @@ class Movement (SyncedSketch):
                                 return
                             if ((self.gyro.val) - self.starting_angle) > self.angle:
                                 self.state = MOVING        
-                        elif self.angle < -3:
+                        elif self.angle < -10:
                             self.motor1.write(1,const)
                             self.motor2.write(1,const)
                             if self.finding and most_recent_angle:
@@ -201,10 +214,10 @@ class Movement (SyncedSketch):
 
             elif self.state == MOVING:
 
-                print "moving"
+                # print "moving"
                 #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-                self.motor1.write(0,90)
-                self.motor2.write(1,90) 
+                self.motor1.write(0,40)
+                self.motor2.write(1,40) 
 
                 if self.gyro_timer.millis() > 1000:
                     self.gyro_timer.reset()
@@ -212,26 +225,26 @@ class Movement (SyncedSketch):
         
 
     def color_sorting(self):
-        # base = 80
-        # if self.found_block:
-            # sign = 1-2*self.detected_color
-            # if (sign*(self.encoder6.val - self.encoder_initial) < 2400):
-            #     # print sign*(self.encoder6.val - self.encoder_initial)
-            #     if self.encoder6.val - self.last_angle == 0 and not self.encoder6.val == self.encoder_initial:
-            #         self.motor6.write(1 - self.detected_color, 30)
-            #     elif (sign*(self.encoder6.val - self.last_angle)) < 5:
-            #         self.speed += 1
-            #         self.motor6.write(self.detected_color, base + self.speed)
-            #         print 12+self.speed
-            #     else: 
-            #         self.motor6.write(self.detected_color, base)
-            # else:
-            #     self.motor6.write(self.detected_color,0)
-            #     self.detected_color = NOBLOCK
-            #     self.count = 0
-            #     self.found_block = False
-            # self.last_angle = self.encoder6.val
-        # else:
+        base = 80
+        if self.found_block:
+            sign = 1-2*self.detected_color
+            if (sign*(self.encoder6.val - self.encoder_initial) < 2400):
+                # print sign*(self.encoder6.val - self.encoder_initial)
+                if self.encoder6.val - self.last_angle == 0 and not self.encoder6.val == self.encoder_initial:
+                    self.motor6.write(1 - self.detected_color, 30)
+                elif (sign*(self.encoder6.val - self.last_angle)) < 5:
+                    self.speed += 1
+                    self.motor6.write(self.detected_color, base + self.speed)
+                    print 12+self.speed
+                else: 
+                    self.motor6.write(self.detected_color, base)
+            else:
+                self.motor6.write(self.detected_color,0)
+                self.detected_color = NOBLOCK
+                self.count = 0
+                self.found_block = False
+            self.last_angle = self.encoder6.val
+        else:
             print self.color.r, self.color.g, self.color.b
             if (self.color.r > 1.3 * self.color.g and self.color.r > 1.3 * self.color.b):
                 if self.detected_color == RED:
@@ -289,13 +302,12 @@ class Movement (SyncedSketch):
                 too_close_count_2 += 1
 
         # Stuck! (Robot is too close to walls and vision sees no color.)
-        if (too_close_count_1 >= 3 or too_close_count_2 >= 3):
+        if (too_close_count_1 >= 3 or too_close_count_2 >= 3) and self.angle == None:
             # TODO: and self.angle == None ^^^^
-
             # Make sure we get a stuck reading 3 times before we declare it stuck.
             self.ir_count += 1
 
-            if self.ir_count >= 5:
+            if self.ir_count >= 3:
 
                 # Stuck, and turning now. Reset the reading count.
                 self.stuck = STUCK
@@ -321,11 +333,6 @@ class Movement (SyncedSketch):
 
 if __name__ == "__main__":
 
-    camera = setup_vision()
-    
-    thread_vision = Thread( target=vision_thread, args=(camera,))
-    thread_vision.daemon = True
-    thread_vision.start()
 
     sketch = Movement(12,-0.00001, 100)
     sketch.run()

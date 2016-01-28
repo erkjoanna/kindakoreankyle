@@ -10,7 +10,7 @@ from constants import *
 Function that finds out what port the webcam is connected to
 '''
 def findPort():
-	port = 0
+	port = -1
 	isFunctional = False
 
 	while not isFunctional:
@@ -18,6 +18,7 @@ def findPort():
 		camera = cv2.VideoCapture(port)
 		isFunctional, temp = camera.read()
 
+	print port
 	return port
 
 
@@ -125,7 +126,12 @@ Returns:
 True if pixel color is the color, else False
 '''
 def check_game_color(img, x, y, color):
-    return img[y][x][2-color] > COLOR_CHECK * img[y][x][0] and img[y][x][2-color] > COLOR_CHECK * img[y][x][1+color]
+	if color == RED:
+		C = COLOR_CHECK_RED
+	elif color == GREEN:
+		C = COLOR_CHECK_GREEN
+
+    return img[y][x][2-color] > C * img[y][x][0] and img[y][x][2-color] > C * img[y][x][1+color]
 
 
 '''
@@ -149,6 +155,7 @@ def vision(camera, color):
 
 
 	img = scipy.misc.imresize(camera_capture, 0.25)
+	cv2.imwrite("orig_img2.png", img)
 
 	img_w = img.shape[1]
 	img_h = img.shape[0]
@@ -172,32 +179,30 @@ def vision(camera, color):
 			else:
 				img[y][x] = np.array([0, 0, 0], dtype=np.uint8)
 
-	if final_avg_x == None and final_avg_y == None or largest_blob < 100:
-		print "asdf"
+	if (final_avg_x == None and final_avg_y == None) or largest_blob < BLOB_MIN_SIZE:
 		return (None, None)
 
 	img[final_avg_y][final_avg_x] = np.array([0, 0, 255], dtype=np.uint8)
 
+	cv2.imwrite("img_with_average2.png", img)
 
 	# Calculating angle and distance
 
 	middle_w = img_w/2.0
-	# TODO: Move to constants file
-	k = .06
 
 	difference = middle_w - final_avg_x
 	actual_x = abs(difference)
 	actual_y = img_h - final_avg_y
 
-	distance = math.hypot(actual_x, actual_y) * k
-
+	distance = math.hypot(actual_x, actual_y) * PIXEL_TO_CENTIMETERS * (BLOB_SCALE_FACTOR / largest_blob)
 
 	if difference > 0:
 		# LEFTSIDE
-		angle = - math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
+		angle = - (math.atan(float(actual_x)/actual_y) * 180.0 / math.pi) * (BLOB_SCALE_FACTOR / largest_blob)
+
 	else:
 		# RIGHTSIDE
-		angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi
+		angle = math.atan(float(actual_x)/actual_y) * 180.0 / math.pi * (BLOB_SCALE_FACTOR / largest_blob)
 
 	print "angle", angle, "degrees", "distance", distance, "centimeters"
 
