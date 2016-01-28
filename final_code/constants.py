@@ -55,7 +55,7 @@ GYRO = 10 #chip select
 #GYRO_OUT = 12 #MISO
 #COLOR_SENSOR_SCL = 19 #these are already defined in original adafruit library because only 1 pair of scl/sda channels
 #COLOR_SENSOR_SDA = 18
-COLOR_LED = 26
+COLOR_LED = 24
 START_PIN = 25
 
 PWM7 = 21 # Servo PWM for Red
