@@ -33,7 +33,7 @@ class Movement (SyncedSketch):
         self.start = DigitalInput(self.tamp, START_PIN)
         self.color_led = DigitalInput(self.tamp, COLOR_LED)
 
-        #setting up the gyro and two motors
+        #setting up the gyro and three motors
         self.gyro = Gyro(self.tamp, GYRO, integrate = True)
         self.encoder1 = Encoder(self.tamp, EN01, EN11, continuous=True)
         self.encoder2 = Encoder(self.tamp, EN02, EN12, continuous=True)
@@ -50,8 +50,8 @@ class Movement (SyncedSketch):
         self.stuck_angle = None
 
         # Brush Motors
-        self.motor3 = Motor(self.tamp, 21, 4)
-        self.motor5 = Motor(self.tamp, 22, 5)
+        self.motor3 = Motor(self.tamp, DIR3, PWM3)
+        self.motor5 = Motor(self.tamp, DIR5, PWM5)
         self.motor3.write(0, 75)
         self.motor5.write(0, 100)
 
@@ -90,11 +90,8 @@ class Movement (SyncedSketch):
         self.turn_timer = None
 
         # setting up the servos
-        self.green_servo = Servo(self.tamp, PWM7)
-        self.red_servo = Servo(self.tamp, PWM8)
-        self.servos = [self.red_servo, self.green_servo]
-        self.servos[0].write(180)
-        self.servos[1].write(20)
+        self.servo = Servo(self.tamp, PWM7)
+        self.servo.write(20)
 
         #setting up the color sensor
         self.color1 = Color(self.tamp, 0, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
@@ -123,21 +120,11 @@ class Movement (SyncedSketch):
             # start the game timer
             if not self.game_timer:
                 self.game_timer = Timer()
-                our_color = self.color_led.val #double check
-                self.servos[0].write(180)
-                self.servos[1].write(20)
-
-                camera = setup_vision()
-                
-                thread_vision = Thread( target=vision_thread, args=(camera,))
-                thread_vision.daemon = True
-                thread_vision.start()
+                setup()
 
             # After 3 minutes
             if self.game_timer.millis() > 179000:
-                print "Game Over!"
-                our_color = self.color_led.val #double check
-                self.servos[0].write(our_color * 180)
+                endgame()
 
 
             if self.main_timer.millis() > 100:
@@ -365,6 +352,25 @@ class Movement (SyncedSketch):
             # else:
             #     self.stuck = NOT_STUCK
             #     print "STATE", self.state, "STUCK?", self.stuck
+
+    def setup():
+        # figure out our color
+        our_color = self.color_led.val
+
+        #close our door
+        self.servo.write(20)
+
+        #vision
+        camera = setup_vision()
+        thread_vision = Thread( target=vision_thread, args=(camera,))
+        thread_vision.daemon = True
+        thread_vision.start()
+
+    def endgame():
+        print "Game Over!"
+        our_color = self.color_led.val #double check
+        self.servos[0].write(our_color * 180)
+
 
 
 if __name__ == "__main__":

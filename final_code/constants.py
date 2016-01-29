@@ -48,6 +48,12 @@ PWM6 = 32
 EN06 = 33
 EN16 = 26
 
+#---------------BRUSH MOTORS------------------#
+DIR3 = 21
+PWM3 = 4
+DIR5 = 22
+PWM5 = 5
+
 
 #-------------OTHER DEVICES------------------#
 GYRO = 10 #chip select
