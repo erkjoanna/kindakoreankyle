@@ -62,6 +62,8 @@ class PacketForwarder(Thread):
         """
         while self.pipe.poll():
             request, response = self.pipe.recv()
+            # if request:
+                # print "Destination:", request[0], "Payload:", request[1].encode('hex'), "Response:", response.encode('hex')
             self.packets_received += 1
             if response == c.host.reset_msg:
                 self.empty_queue()

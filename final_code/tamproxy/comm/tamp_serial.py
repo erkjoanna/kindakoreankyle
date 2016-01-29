@@ -44,8 +44,7 @@ class TAMPSerial(serial.Serial):
         else:
             print "Enter the index of the desired serial port:"
             for i,p in enumerate(ports): print i,p
-            #return ports[int(raw_input())]
-            return ports[0]
+            return ports[int(raw_input())]
 
     def detect_ports(self):
         """ Lists serial port names
