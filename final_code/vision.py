@@ -10,7 +10,7 @@ from constants import *
 Function that finds out what port the webcam is connected to
 '''
 def findPort():
-	port = 0
+	port = 1
 	isFunctional = False
 
 	while not isFunctional:
@@ -18,7 +18,7 @@ def findPort():
 		camera = cv2.VideoCapture(port)
 		isFunctional, temp = camera.read()
 
-	print port
+	print "camera port", port
 	return port
 
 
