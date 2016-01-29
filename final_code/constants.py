@@ -77,10 +77,11 @@ BLOB_MIN_SIZE = 750
 PIXEL_TO_CENTIMETERS = 0.06
 BLOB_SCALE_FACTOR = 500.0
 
-
-################COLOR SENSORS###################
+############ COLOR SENSORS / BSLAPPER ###########
 RED_THRESH = 1.4
 GREEN_THRESH = 1.2
+CONSISTENCY_THRESH = 3
+SLAPPER_SPEED = 80
 
 ################OTHER###################
 TURN_MILLIS = 10000

@@ -99,7 +99,6 @@ class Movement (SyncedSketch):
 
         #robot movement variables
         self.state = CALCULATING
-        self.stuck = NOT_STUCK
         self.starting_angle = self.gyro.val
         self.finding = False
         
@@ -116,6 +115,7 @@ class Movement (SyncedSketch):
     	global our_color
     	global most_recent_angle
     	global most_recent_distance
+
         if self.start.val:
             # start the game timer
             if not self.game_timer:
@@ -135,7 +135,6 @@ class Movement (SyncedSketch):
 
                 # Check IR Sensors
                 if self.game_timer.millis() > 500:
-
                     self.check_ir_sensors()
                     
             
@@ -238,26 +237,31 @@ class Movement (SyncedSketch):
                 #     self.state = CALCULATING
         
 
-    def bitchslap(self):
-        base = 80
+    def bitchslap(self):        
         if self.found_block:
-            sign = 1-2*self.detected_color
+
+            direction = (self.detected_color == our_color)
+            sign = 1 - 2 * direction
             done = False
+
             if (sign*(self.encoder6.val - self.encoder_initial) < 2000):
+                # safety check
                 if (sign*(self.encoder6.val - self.encoder_initial) < 0):
                     print "something is wrong  -- preventing it from going crazy"
                     done = True
-                print sign*(self.encoder6.val - self.encoder_initial)
+                
                 # if stuck for a while, back up a little
                 if self.encoder6.val - self.last_angle == 0 and not self.encoder6.val == self.encoder_initial:
                     self.count += 1
-                    if self.count > 5:
-                        self.motor6.write(1 - (self.detected_color == our_color), 30)
+                    if self.count > CONSISTENCY_THRESH:
+                        self.motor6.write(1 - direction, 20)
                         self.count = 0
+
                 # you gucchi
                 else: 
+                    self.motor6.write(direction, SLAPPER_SPEED)
                     self.count = 0
-                    self.motor6.write((self.detected_color == our_color), base)
+
             else:
                 done = True
 
@@ -266,23 +270,26 @@ class Movement (SyncedSketch):
                 self.detected_color = NOBLOCK
                 self.count = 0
                 self.found_block = False
+
             self.last_angle = self.encoder6.val
         else:
             # print self.color1.r, self.color1.g, self.color1.b
-            if (self.color1.r > RED_THRESH * self.color1.g and self.color1.r > RED_THRESH * self.color1.b) or (self.color2.r > RED_THRESH * self.color2.g and self.color2.r > RED_THRESH * self.color2.b):
+            if (self.color1.r > RED_THRESH * self.color1.g and self.color1.r > RED_THRESH * self.color1.b) \
+            or (self.color2.r > RED_THRESH * self.color2.g and self.color2.r > RED_THRESH * self.color2.b):
                 if self.detected_color == RED:
                     self.count = self.count + 1
                 else:
                     self.detected_color = RED
                     self.count = 0
-            elif (self.color1.g > GREEN_THRESH * self.color1.r and self.color1.g > GREEN_THRESH * self.color1.b) or (self.color2.g > GREEN_THRESH * self.color2.r and self.color2.g > GREEN_THRESH * self.color2.b):
+            elif (self.color1.g > GREEN_THRESH * self.color1.r and self.color1.g > GREEN_THRESH * self.color1.b) \
+            or (self.color2.g > GREEN_THRESH * self.color2.r and self.color2.g > GREEN_THRESH * self.color2.b):
                 if self.detected_color == GREEN:
                     self.count = self.count + 1
                 else:
                     self.detected_color = GREEN
                     self.count = 0
 
-            if not self.detected_color == NOBLOCK and self.count > 2:
+            if not self.detected_color == NOBLOCK and self.count >= CONSISTENCY_THRESH:
                 print "color is", self.detected_color
                 self.encoder_initial = self.encoder6.val
                 self.found_block = True
@@ -294,25 +301,18 @@ class Movement (SyncedSketch):
 
         for i in xrange(len(self.ir_readings)):
             ir_reading = self.ir_sensors[i].val / 1000.0
-
             self.ir_readings[i] = short_ir_distance(ir_reading)
 
 
         sensors_too_close = []
-
         # Check if the robot is too close to the walls.
         for i in xrange(len(self.ir_readings)):
             ir = self.ir_readings[i]
-
             if (ir < THRESHOLD):
-
-
                 sensors_too_close.append(i)
 
 
         # It is stuck if sensors 0, 1, 2 or 4, 5, 6 are < THRESHOLD
-
-
         # See if the sensors that are too close are 0, 1, 2 or 0, 4, 5.
         too_close_count_1 = 0
         too_close_count_2 = 0
@@ -325,33 +325,16 @@ class Movement (SyncedSketch):
                 too_close_count_2 += 1
 
         # Stuck! (Robot is too close to walls and vision sees no color.)
-        if (too_close_count_1 >= 3 or too_close_count_2 >= 3) and self.angle == None:
-            # TODO: and self.angle == None ^^^^
+        if (too_close_count_1 >= length(STUCK_SENSORS_1) or too_close_count_2 >= length(STUCK_SENSORS_2)) and self.angle == None:
             # Make sure we get a stuck reading 3 times before we declare it stuck.
             self.ir_count += 1
 
             if self.ir_count >= 3:
-
                 # Stuck, and turning now. Reset the reading count.
-                self.stuck = STUCK
                 self.state = TURNING
                 self.ir_count = 0
         else:
             self.ir_count = 0
-            self.stuck = NOT_STUCK
-            # print "NOT STUCK"
-            self.state = CALCULATING
-            # print "STATE", self.state, "STUCK?", self.stuck
-            # self.state = MOVING
-
-
-        # print self.ir_count
-        # print "STATE", self.state, "STUCK?", self.stuck
-
-
-            # else:
-            #     self.stuck = NOT_STUCK
-            #     print "STATE", self.state, "STUCK?", self.stuck
 
     def setup():
         # figure out our color
