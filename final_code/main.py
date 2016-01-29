@@ -95,7 +95,8 @@ class Movement (SyncedSketch):
         self.servos[1].write(20)
 
         #setting up the color sensor
-        self.color = Color(self.tamp, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
+        self.color1 = Color(self.tamp, 0, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
+        self.color2 = Color(self.tamp, 1, integrationTime=Color.INTEGRATION_TIME_101MS, gain=Color.GAIN_1X)
 
         #robot movement variables
         self.state = CALCULATING
@@ -168,7 +169,7 @@ class Movement (SyncedSketch):
 
             elif self.state == TURNING:
 #                print "TURNING"
-		const = 25
+		        const = 25
                 if (self.stuck == STUCK):
 
                     # Rotate if stuck until we're out of UNSTUCK state.
@@ -245,21 +246,23 @@ class Movement (SyncedSketch):
                 self.found_block = False
             self.last_angle = self.encoder6.val
         else:
-            print self.color.r, self.color.g, self.color.b
-            if (self.color.r > 1.3 * self.color.g and self.color.r > 1.3 * self.color.b):
+            # print self.color1.r, self.color1.g, self.color1.b
+            if (self.color1.r > RED_THRESH * self.color1.g and self.color1.r > RED_THRESH * self.color1.b) or 
+               (self.color2.r > RED_THRESH * self.color2.g and self.color2.r > RED_THRESH * self.color2.b):
                 if self.detected_color == RED:
                     self.count = self.count + 1
                 else:
                     self.detected_color = RED
                     self.count = 0
-            elif (self.color.g > COLOR_CHECK * self.color.r and self.color.g > COLOR_CHECK * self.color.b):
+            elif (self.color1.g > GREEN_THRESH * self.color1.r and self.color1.g > GREEN_THRESH * self.color1.b) or 
+                 (self.color2.g > GREEN_THRESH * self.color2.r and self.color2.g > GREEN_THRESH * self.color2.b):
                 if self.detected_color == GREEN:
                     self.count = self.count + 1
                 else:
                     self.detected_color = GREEN
                     self.count = 0
 
-            if not self.detected_color == NOBLOCK and self.count > 5:
+            if not self.detected_color == NOBLOCK and self.count > 2:
                 print "color is", self.detected_color
                 self.encoder_initial = self.encoder6.val
                 self.found_block = True

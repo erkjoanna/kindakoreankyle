@@ -72,3 +72,8 @@ PIXEL_TO_CENTIMETERS = 0.06
 BLOB_SCALE_FACTOR = 500
 
 
+################COLOR SENSORS###################
+RED_THRESH = 1.4
+GREEN_THRESH = 1.2
+
+
