@@ -230,15 +230,17 @@ class Movement (SyncedSketch):
         if self.found_block:
             sign = 1-2*self.detected_color
             if (sign*(self.encoder6.val - self.encoder_initial) < 2400):
-                # print sign*(self.encoder6.val - self.encoder_initial)
+                print sign*(self.encoder6.val - self.encoder_initial)
+                # if stuck for a while, back up a little
                 if self.encoder6.val - self.last_angle == 0 and not self.encoder6.val == self.encoder_initial:
-                    self.motor6.write(1 - self.detected_color, 30)
-                elif (sign*(self.encoder6.val - self.last_angle)) < 5:
-                    self.speed += 1
-                    self.motor6.write(self.detected_color, base + self.speed)
-                    print 12+self.speed
+                    self.count += 1
+                    if self.count > 5:
+                        self.motor6.write(1 - (self.detected_color == our_color), 30)
+                        self.count = 0
+                # you gucchi
                 else: 
-                    self.motor6.write(self.detected_color, base)
+                    self.count = 0
+                    self.motor6.write((self.detected_color == our_color), base)
             else:
                 self.motor6.write(self.detected_color,0)
                 self.detected_color = NOBLOCK
@@ -247,15 +249,13 @@ class Movement (SyncedSketch):
             self.last_angle = self.encoder6.val
         else:
             # print self.color1.r, self.color1.g, self.color1.b
-            if (self.color1.r > RED_THRESH * self.color1.g and self.color1.r > RED_THRESH * self.color1.b) or 
-               (self.color2.r > RED_THRESH * self.color2.g and self.color2.r > RED_THRESH * self.color2.b):
+            if (self.color1.r > RED_THRESH * self.color1.g and self.color1.r > RED_THRESH * self.color1.b) or (self.color2.r > RED_THRESH * self.color2.g and self.color2.r > RED_THRESH * self.color2.b):
                 if self.detected_color == RED:
                     self.count = self.count + 1
                 else:
                     self.detected_color = RED
                     self.count = 0
-            elif (self.color1.g > GREEN_THRESH * self.color1.r and self.color1.g > GREEN_THRESH * self.color1.b) or 
-                 (self.color2.g > GREEN_THRESH * self.color2.r and self.color2.g > GREEN_THRESH * self.color2.b):
+            elif (self.color1.g > GREEN_THRESH * self.color1.r and self.color1.g > GREEN_THRESH * self.color1.b) or (self.color2.g > GREEN_THRESH * self.color2.r and self.color2.g > GREEN_THRESH * self.color2.b):
                 if self.detected_color == GREEN:
                     self.count = self.count + 1
                 else:
@@ -337,7 +337,7 @@ class Movement (SyncedSketch):
 if __name__ == "__main__":
 
 
-    sketch = Movement(12,-0.00001, 100)
+    sketch = Movement(15,-0.00001, 100)
     sketch.run()
    
     for sig in (SIGABRT, SIGILL, SIGINT, SIGSEGV, SIGTERM):
