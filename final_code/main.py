@@ -75,7 +75,16 @@ class Movement (SyncedSketch):
         self.long4 = AnalogInput(self.tamp, LONG4)
         self.long5 = AnalogInput(self.tamp, LONG5)
 
-        self.ir_readings = [0] * 7 # readings are formatted as (short, long)
+        self.ir_readings = [0] * 7
+
+        self.ir_sensors = []
+        self.ir_sensors.append(self.short0)
+        self.ir_sensors.append(self.short1)
+        self.ir_sensors.append(self.short2)
+        self.ir_sensors.append(self.short3)
+        self.ir_sensors.append(self.short4)
+        self.ir_sensors.append(self.short5)
+        self.ir_sensors.append(self.long0)
 
         self.ir_count = 0
 
@@ -123,7 +132,6 @@ class Movement (SyncedSketch):
 
 
             if self.main_timer.millis() > 100:
-                print "main"
                 self.main_timer.reset()
 
                 # Color sorting blocks
@@ -133,7 +141,7 @@ class Movement (SyncedSketch):
                 if self.game_timer.millis() > 500:
                     self.check_ir_sensors()
 
-            Transition through states.            
+            # Transition through states.            
             self.run_state_machine()
 
     def test(self):
@@ -159,6 +167,8 @@ class Movement (SyncedSketch):
     def run_state_machine(self):
         if self.state == CALCULATING:
 
+            # print "CALCULATING"
+
             # Setting starting angle.
             self.starting_angle = self.gyro.val
 
@@ -170,14 +180,18 @@ class Movement (SyncedSketch):
 
         elif self.state == TURNING:
 
+            # print "TURNING"
+
             # # Initialize timer that tracks how long robot has been turning.
-            # self.initialize_turn_timer()
+            self.initialize_turn_timer()
 
             # Every 100 milliseconds, check for desired angle and if we have turned to it.
             # TURNING --> CALCULATING or MOVING
             self.turn_to_desired_angle()                 
 
         elif self.state == MOVING:
+
+            # print "MOVING"
 
             self.move_forward()
 
@@ -201,69 +215,74 @@ class Movement (SyncedSketch):
 
 
     def turn_to_desired_angle(self):
-        x = 1
 
-        # global our_color
-        # global most_recent_angle
-        # global most_recent_distance 
+        global our_color
+        global most_recent_angle
+        global most_recent_distance 
 
-        # if self.gyro_timer.millis() > 100:
-        #     self.gyro_timer.reset()
+        if self.gyro_timer.millis() > 100:
+            self.gyro_timer.reset()
 
-        #     # Check if robot has turned 360 degrees, and go to farthest sensor if needed.
-        #     self.check_360_turn()
+            # Check if robot has turned 360 degrees, and go to farthest sensor if needed.
+            self.check_360_turn()
 
-        #     # Set desired angle.
-        #     if self.farthest_sensor_angle:
-        #         desired_angle = self.farthest_sensor_angle
-        #     else:
-        #         desired_angle = self.angle
+            # Set desired angle.
+            if self.farthest_sensor_angle:
+                desired_angle = self.farthest_sensor_angle
+            else:
+                desired_angle = self.angle
 
-        #     # Positive desired angle.
-        #     if desired_angle > 10:
-        #         self.motor1.write(0, TURN_SPEED)
-        #         self.motor2.write(0, TURN_SPEED)
+            # Positive desired angle.
+            if desired_angle > 10:
+                self.motor1.write(0, TURN_SPEED)
+                self.motor2.write(0, TURN_SPEED)
 
-        #         # Vision is still finding (no angle, no distance) but we just got a reading!
-        #         # TURNING --> CALCULATING
-        #         if self.finding and most_recent_angle:
-        #             self.state = CALCULATING
-        #             return
+                # Vision is still finding (no angle, no distance) but we just got a reading!
+                # TURNING --> CALCULATING
+                if self.finding and most_recent_angle:
+                    self.state = CALCULATING
+                    return
 
-        #         # Robot has turned to desired angle.
-        #         # TURNING --> MOVING
-        #         if ((self.gyro.val) - self.starting_angle) > desired_angle:
-        #             self.state = MOVING  
+                # Robot has turned to desired angle.
+                # TURNING --> MOVING
+                if ((self.gyro.val) - self.starting_angle) > desired_angle:
+                    self.state = MOVING
+                    self.farthest_sensor_angle = None
 
-        #     # Negative desired angle.      
-        #     elif desired_angle < -10:
-        #         self.motor1.write(1, TURN_SPEED)
-        #         self.motor2.write(1, TURN_SPEED)
+            # Negative desired angle.      
+            elif desired_angle < -10:
+                self.motor1.write(1, TURN_SPEED)
+                self.motor2.write(1, TURN_SPEED)
 
 
-        #         # Vision is still finding (no angle, no distance) but we just got a reading!
-        #         # TURNING --> CALCULATING
-        #         if self.finding and most_recent_angle:
-        #             self.state = CALCULATING
-        #             return
+                # Vision is still finding (no angle, no distance) but we just got a reading!
+                # TURNING --> CALCULATING
+                if self.finding and most_recent_angle:
+                    self.state = CALCULATING
+                    return
 
-        #         # Robot has turned to desired angle.
-        #         # TURNING --> MOVING 
-        #         if ((self.gyro.val) - self.starting_angle) < desired_angle:
-        #             self.state = MOVING
+                # Robot has turned to desired angle.
+                # TURNING --> MOVING 
+                if ((self.gyro.val) - self.starting_angle) < desired_angle:
+                    self.state = MOVING
+                    self.farthest_sensor_angle = None
 
-        #     # Move forward, no turning needed.
-        #     else:
-        #         self.state = MOVING
+            # Move forward, no turning needed.
+            else:
+                self.state = MOVING
+                self.farthest_sensor_angle = None
 
     def check_360_turn(self):
 
-        if (self.turn_timer.millis() > TURN_MILLIS):
+        print "turn timer", self.turn_timer.millis()
+
+        if (abs(self.gyro.val - self.starting_angle) < 10 and self.turn_timer.millis() > TURN_MILLIS):
             self.turn_timer.reset()
 
             self.set_farthest_sensor_angle()
 
             self.starting_angle = self.gyro.val
+            self.turn_timer.reset()
 
 
     def set_farthest_sensor_angle(self):
@@ -280,21 +299,20 @@ class Movement (SyncedSketch):
 
             # Set the farthest sensor angle to the one we find from the readings.
             self.farthest_sensor_angle = angle
+            self.starting_angle = self.gyro.val
             print "farthest_sensor_angle", self.farthest_sensor_angle
 
     def move_forward(self):
-        print "forward"
-        # # Move forward until the front IR sensor has something in front of it.
-        # if ((self.ir_readings[0] > THRESHOLD and self.ir_readings[6] > THRESHOLD) or self.angle):
-        #     self.motor1.write(0,40)
-        #     self.motor2.write(1,40)
-        # else:
-        #     # MOVING --> CALCULATING
-        #     self.state = CALCULATING
+        # Move forward until the front IR sensor has something in front of it.
+        if ((self.ir_readings[0] > THRESHOLD and self.ir_readings[6] > THRESHOLD) or self.angle):
+            self.motor1.write(0,20)
+            self.motor2.write(1,20)
+        else:
+            # MOVING --> CALCULATING
+            self.state = CALCULATING
  
 
     def bitchslap(self): 
-        print "hi"
         global our_color
         global most_recent_angle
         global most_recent_distance 
@@ -334,7 +352,7 @@ class Movement (SyncedSketch):
 
             self.last_angle = self.encoder6.val
         else:
-            print self.color1.r, self.color1.g, self.color1.b
+            # print self.color1.r, self.color1.g, self.color1.b
             if (self.color1.r > RED_THRESH * self.color1.g and self.color1.r > RED_THRESH * self.color1.b) \
             or (self.color2.r > RED_THRESH * self.color2.g and self.color2.r > RED_THRESH * self.color2.b):
                 if self.detected_color == RED:
