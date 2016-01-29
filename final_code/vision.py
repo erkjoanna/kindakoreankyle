@@ -10,7 +10,7 @@ from constants import *
 Function that finds out what port the webcam is connected to
 '''
 def findPort():
-	port = 1
+	port = 0
 	isFunctional = False
 
 	while not isFunctional:
