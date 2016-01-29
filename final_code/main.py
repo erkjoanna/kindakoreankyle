@@ -77,14 +77,23 @@ class Movement (SyncedSketch):
 
         self.ir_readings = [0] * 7
 
-        self.ir_sensors = []
-        self.ir_sensors.append(self.short0)
-        self.ir_sensors.append(self.short1)
-        self.ir_sensors.append(self.short2)
-        self.ir_sensors.append(self.short3)
-        self.ir_sensors.append(self.short4)
-        self.ir_sensors.append(self.short5)
-        self.ir_sensors.append(self.long0)
+        self.short_ir_sensors = []
+        self.short_ir_sensors.append(self.short0)
+        self.short_ir_sensors.append(self.short1)
+        self.short_ir_sensors.append(self.short2)
+        self.short_ir_sensors.append(self.short3)
+        self.short_ir_sensors.append(self.short4)
+        self.short_ir_sensors.append(self.short5)
+        self.short_ir_sensors.append(self.long0)
+
+        self.long_ir_sensors = []
+        self.long_ir_sensors.append(self.short0)
+        self.long_ir_sensors.append(self.long1)
+        self.long_ir_sensors.append(self.long2)
+        self.long_ir_sensors.append(self.long3)
+        self.long_ir_sensors.append(self.long4)
+        self.long_ir_sensors.append(self.long5)
+        self.long_ir_sensors.append(self.long0)
 
         self.ir_count = 0
 
@@ -232,6 +241,9 @@ class Movement (SyncedSketch):
             else:
                 desired_angle = self.angle
 
+            if not desired_angle == None:
+                desired_angle = 360
+                
             # Positive desired angle.
             if desired_angle > 10:
                 self.motor1.write(0, TURN_SPEED)
@@ -274,14 +286,15 @@ class Movement (SyncedSketch):
 
     def check_360_turn(self):
 
-        print "turn timer", self.turn_timer.millis()
-
-        if (abs(self.gyro.val - self.starting_angle) < 10 and self.turn_timer.millis() > TURN_MILLIS):
+        if (abs(self.gyro.val - self.starting_angle + 360) % 360 < 10 and self.turn_timer.millis() > TURN_MILLIS):
             self.turn_timer.reset()
 
             self.set_farthest_sensor_angle()
 
             self.starting_angle = self.gyro.val
+            self.turn_timer.reset()
+
+        if self.angle:
             self.turn_timer.reset()
 
 
@@ -291,10 +304,11 @@ class Movement (SyncedSketch):
 
             angle = None
             farthest_sensor = 0
+            print self.ir_readings
 
             for i in xrange(len(self.ir_readings)):
-                if self.ir_readings[i] > farthest_sensor:
-                    farthest_sensor = self.ir_readings[i]
+                if self.long_ir_sensors[i].val > farthest_sensor:
+                    farthest_sensor = self.long_ir_sensors[i].val
                     angle = (i % 6) * 60
 
             # Set the farthest sensor angle to the one we find from the readings.
@@ -303,10 +317,11 @@ class Movement (SyncedSketch):
             print "farthest_sensor_angle", self.farthest_sensor_angle
 
     def move_forward(self):
+        print "moving forward"
         # Move forward until the front IR sensor has something in front of it.
         if ((self.ir_readings[0] > THRESHOLD and self.ir_readings[6] > THRESHOLD) or self.angle):
-            self.motor1.write(0,20)
-            self.motor2.write(1,20)
+            self.motor1.write(0,FORWARD_SPEED)
+            self.motor2.write(1,FORWARD_SPEED)
         else:
             # MOVING --> CALCULATING
             self.state = CALCULATING
@@ -379,7 +394,7 @@ class Movement (SyncedSketch):
         # Get the sensor readings and find the distances
 
         for i in xrange(len(self.ir_readings)):
-            ir_reading = self.ir_sensors[i].val / 1000.0
+            ir_reading = self.short_ir_sensors[i].val / 1000.0
             self.ir_readings[i] = short_ir_distance(ir_reading)
 
 
@@ -410,6 +425,7 @@ class Movement (SyncedSketch):
 
             if self.ir_count >= 3:
                 # Stuck, and turning now. Reset the reading count.
+                print "stuckkk :("
                 self.state = TURNING
                 self.ir_count = 0
         else:
