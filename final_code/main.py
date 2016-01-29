@@ -47,7 +47,7 @@ class Movement (SyncedSketch):
         #initializing angle and distance
         self.angle = 0
         self.distance = 0
-        self.stuck_angle = None
+        self.farthest_sensor_angle = None
 
         # Brush Motors
         self.motor3 = Motor(self.tamp, 21, 4)
@@ -146,110 +146,133 @@ class Movement (SyncedSketch):
                 # Color sorting blocks
                 self.bitchslap()
 
-                # Check IR Sensors
+                # Check IR Sensors after the first 500 milliseconds.
                 if self.game_timer.millis() > 500:
-
                     self.check_ir_sensors()
-                    
-            
-            if self.state == CALCULATING:
-                #print "calculating"
 
-                ###VISION###
-                self.angle = most_recent_angle
-                self.distance = most_recent_distance
+            # Transition through states.            
+            self.run_state_machine()
+    
+    def run_state_machine(self):
+        if self.state == CALCULATING:
 
-                self.starting_angle = self.gyro.val
+            # Setting starting angle.
+            self.starting_angle = self.gyro.val
 
-                # Vision does not see any color, rotate in place.
-                if self.angle == None and self.distance == None:
-                    self.finding = True
+            # Get angle and distance from vision thread.
+            self.get_angle_and_distance()
 
-                self.state = TURNING
+            # CALCULATING --> TURNING
+            self.state = TURNING
 
-                ###ENCODERS###
+        elif self.state == TURNING:
 
-            elif self.state == TURNING:
-               # print "TURNING"
-                if not self.turn_timer:
-                    self.turn_timer = Timer()                    
+            # Initialize timer that tracks how long robot has been turning.
+            self.initialize_turn_timer()
 
+            # Every 100 milliseconds, check for desired angle and if we have turned to it.
+            # TURNING --> CALCULATING or MOVING
+            self.turn_to_desired_angle()                 
 
-                if (self.stuck == STUCK):
+        elif self.state == MOVING:
 
-                    # Rotate if stuck until we're out of UNSTUCK state.
-                    print "TURNING STUCK"
-
-                   # self.motor1.write(0, 30)
-                   # self.motor2.write(0, 30)
-
-                else:
-                    #take a snapshot of the current gyro number
-
-                    #while the robot hasn't turned desired degrees yet
-                    if self.gyro_timer.millis() > 100:
-                        # print "starting_angle: ", self.starting_angle #check.
-                        # print "difference: ",(self.gyro.val)-self.starting_angle
-                        # print "self.angle: ", self.angle
-                        self.gyro_timer.reset()
-
-                        if abs(self.gyro.val - self.starting_angle) < 10 and (self.turn_timer.millis() > TURN_MILLIS):
-                            # TODO: Might need to test this with and instead of or.
-                            self.turn_timer.reset()
-
-                            farthest_sensor_angle = None
-                            farthest_sensor = 0
-
-                            for i in xrange(len(self.ir_readings)):
-                                if self.ir_readings[i] > farthest_sensor:
-                                    farthest_sensor = self.ir_readings[i]
-                                    farthest_sensor_angle = (i % 6) * 60
-
-                            self.starting_angle = self.gyro.val
-
-                            # Set the robot to turn to the farthest sensor angle.
-                            self.stuck_angle = farthest_sensor_angle
+            self.move_forward()
 
 
-                        if self.stuck_angle:
-                            desired_angle = self.stuck_angle
-                        else:
-                            desired_angle = self.angle
+    def set_angle_and_distance(self):
+        # Setting angle and distance received from vision.
+        self.angle = most_recent_angle
+        self.distance = most_recent_distance
 
-                        if desired_angle > 10:
-                            self.motor1.write(0,const)
-                            self.motor2.write(0,const)
-                            if self.finding and most_recent_angle:
-                                self.state = CALCULATING
-                                return
-                            if ((self.gyro.val) - self.starting_angle) > desired_angle:
-                                self.state = MOVING        
-                        elif desired_angle < -10:
-                            self.motor1.write(1,const)
-                            self.motor2.write(1,const)
-                            if self.finding and most_recent_angle:
-                                self.state = CALCULATING
-                                return
-                            if ((self.gyro.val) - self.starting_angle) < desired_angle:
-                                self.state = MOVING
-                        else:
-                            self.state = MOVING
+        # Vision does not send us angle or distance info, so still finding.
+        if self.angle == None and self.distance == None:
+            self.finding = True
 
-            elif self.state == MOVING:
-
-                # print "moving"
-                #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-                if (self.ir_readings[0] > THRESHOLD and self.ir_readings[6] > THRESHOLD)
-                    self.motor1.write(0,40)
-                    self.motor2.write(1,40) 
-
-                # Move forward until the front IR sensor gets stuck.
+    def initialize_turn_timer(self):
+        if not self.turn_timer:
+            self.turn_timer = Timer()  
 
 
-                # if self.gyro_timer.millis() > 1000:
-                #     self.gyro_timer.reset()
-                #     self.state = CALCULATING
-        
+    def turn_to_desired_angle(self):
+        if self.gyro_timer.millis() > 100:
+            self.gyro_timer.reset()
+
+            # Check if robot has turned 360 degrees, and go to farthest sensor if needed.
+            self.check_360_turn()
+
+            # Set desired angle.
+            if self.farthest_sensor_angle:
+                desired_angle = self.farthest_sensor_angle
+            else:
+                desired_angle = self.angle
+
+            # Positive desired angle.
+            if desired_angle > 10:
+                self.motor1.write(0, TURN_SPEED)
+                self.motor2.write(0, TURN_SPEED)
+
+                # Vision is still finding (no angle, no distance) but we just got a reading!
+                # TURNING --> CALCULATING
+                if self.finding and most_recent_angle:
+                    self.state = CALCULATING
+                    return
+
+                # Robot has turned to desired angle.
+                # TURNING --> MOVING
+                if ((self.gyro.val) - self.starting_angle) > desired_angle:
+                    self.state = MOVING  
+
+            # Negative desired angle.      
+            elif desired_angle < -10:
+                self.motor1.write(1, TURN_SPEED)
+                self.motor2.write(1, TURN_SPEED)
+
+
+                # Vision is still finding (no angle, no distance) but we just got a reading!
+                # TURNING --> CALCULATING
+                if self.finding and most_recent_angle:
+                    self.state = CALCULATING
+                    return
+
+                # Robot has turned to desired angle.
+                # TURNING --> MOVING 
+                if ((self.gyro.val) - self.starting_angle) < desired_angle:
+                    self.state = MOVING
+
+            # Move forward, no turning needed.
+            else:
+                self.state = MOVING
+
+    def check_360_turn(self):
+        if abs(self.gyro.val - self.starting_angle) < 10 and (self.turn_timer.millis() > TURN_MILLIS):
+            self.turn_timer.reset()
+
+            self.set_farthest_sensor_angle()
+
+            self.starting_angle = self.gyro.val
+
+
+    def set_farthest_sensor_angle(self):
+            angle = None
+            farthest_sensor = 0
+
+            for i in xrange(len(self.ir_readings)):
+                if self.ir_readings[i] > farthest_sensor:
+                    farthest_sensor = self.ir_readings[i]
+                    angle = (i % 6) * 60
+
+            # Set the farthest sensor angle to the one we find from the readings.
+            self.farthest_sensor_angle = angle
+
+    def move_forward(self):
+        # Move forward until the front IR sensor has something in front of it.
+        if ((self.ir_readings[0] > THRESHOLD and self.ir_readings[6] > THRESHOLD) or self.angle):
+            self.motor1.write(0,40)
+            self.motor2.write(1,40)
+        else:
+            # MOVING --> CALCULATING
+            self.state = CALCULATING
+ 
 
     def bitchslap(self):
         base = 80
