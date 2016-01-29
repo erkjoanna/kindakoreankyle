@@ -229,7 +229,12 @@ class Movement (SyncedSketch):
         base = 80
         if self.found_block:
             sign = 1-2*self.detected_color
+            done = False
             if (sign*(self.encoder6.val - self.encoder_initial) < 2400):
+                if (sign*(self.encoder6.val - self.encoder_initial) < 0):
+                    print "something is wrong  -- preventing it from going crazy"
+                    done = True
+
                 print sign*(self.encoder6.val - self.encoder_initial)
                 # if stuck for a while, back up a little
                 if self.encoder6.val - self.last_angle == 0 and not self.encoder6.val == self.encoder_initial:
@@ -242,7 +247,10 @@ class Movement (SyncedSketch):
                     self.count = 0
                     self.motor6.write((self.detected_color == our_color), base)
             else:
-                self.motor6.write(self.detected_color,0)
+                done = True
+
+            if done:
+                self.motor6.write(self.detected_color, 0)
                 self.detected_color = NOBLOCK
                 self.count = 0
                 self.found_block = False
