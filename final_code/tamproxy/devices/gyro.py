@@ -57,13 +57,15 @@ class Gyro(ContinuousReadDevice):
         st1 = (ret_word >> 27) & 0x1
         self.status = [st1,st0]
         if self.status != self.VALID_READ_STATUS:
-            return
+            pass
+            # return
         # Extract rate reading
         reading = ((ret_word >> 10) & 0xffff)
         # Make signed
         if reading > 0x7fff:
             reading -= 0xffff
         reading /= 80.0 # Convert to degrees
+
         if self.integrate:
             now = time.time()
             if self.time is not None:
