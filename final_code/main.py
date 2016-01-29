@@ -245,14 +245,13 @@ class Movement (SyncedSketch):
                 self.found_block = False
             self.last_angle = self.encoder6.val
         else:
-            print self.color.r, self.color.g, self.color.b
             if (self.color.r > 1.3 * self.color.g and self.color.r > 1.3 * self.color.b):
                 if self.detected_color == RED:
                     self.count = self.count + 1
                 else:
                     self.detected_color = RED
                     self.count = 0
-            elif (self.color.g > COLOR_CHECK * self.color.r and self.color.g > COLOR_CHECK * self.color.b):
+            elif (self.color.g > COLOR_CHECK_GREEN * self.color.r and self.color.g > COLOR_CHECK_GREEN * self.color.b):
                 if self.detected_color == GREEN:
                     self.count = self.count + 1
                 else:

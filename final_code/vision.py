@@ -131,7 +131,7 @@ def check_game_color(img, x, y, color):
 	elif color == GREEN:
 		C = COLOR_CHECK_GREEN
 
-    return img[y][x][2-color] > C * img[y][x][0] and img[y][x][2-color] > C * img[y][x][1+color]
+	return img[y][x][2-color] > C * img[y][x][0] and img[y][x][2-color] > C * img[y][x][1+color]
 
 
 '''
