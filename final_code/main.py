@@ -238,7 +238,7 @@ class Movement (SyncedSketch):
                 desired_angle = 360
             print desired_angle
 
-            desired_angle *= 0.7
+            desired_angle *= DESIRED_SCALING_FACTOR
 
             # Positive desired angle.
             if desired_angle > 10:
