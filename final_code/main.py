@@ -47,6 +47,7 @@ class Movement (SyncedSketch):
         #initializing angle and distance
         self.angle = 0
         self.distance = 0
+        self.stuck_angle = None
 
         # Brush Motors
         self.motor3 = Motor(self.tamp, 21, 4)
@@ -86,6 +87,7 @@ class Movement (SyncedSketch):
         self.main_timer = Timer() # setting the timer for wall avoidance
         self.gyro_timer = Timer() # setting the timer for turning
         self.game_timer = None # setting the timer for the servo
+        self.turn_timer = None
 
         # setting up the servos
         self.green_servo = Servo(self.tamp, PWM7)
@@ -135,7 +137,7 @@ class Movement (SyncedSketch):
             if self.game_timer.millis() > 179000:
                 print "Game Over!"
                 our_color = self.color_led.val #double check
-                self.servos[our_color].write(our_color * 180)
+                self.servos[0].write(our_color * 180)
 
 
             if self.main_timer.millis() > 100:
@@ -168,15 +170,18 @@ class Movement (SyncedSketch):
                 ###ENCODERS###
 
             elif self.state == TURNING:
-#                print "TURNING"
-		        const = 25
+               # print "TURNING"
+                if not self.turn_timer:
+                    self.turn_timer = Timer()                    
+
+
                 if (self.stuck == STUCK):
 
                     # Rotate if stuck until we're out of UNSTUCK state.
                     print "TURNING STUCK"
 
-                #    self.motor1.write(0, 30)
-                 #   self.motor2.write(0, 30)
+                   # self.motor1.write(0, 30)
+                   # self.motor2.write(0, 30)
 
                 else:
                     #take a snapshot of the current gyro number
@@ -188,27 +193,44 @@ class Movement (SyncedSketch):
                         # print "self.angle: ", self.angle
                         self.gyro_timer.reset()
 
-                        # if (self.gyro.val - self.starting_angle) < 5 and (self.cycle_timer.millis() > TURN_SECONDS):
-                        #     # TODO: Might need to test this with and instead of or.
-                        #     if self.ir_readings[0] > THRESHOLD or self.ir_readings[6] > THRESHOLD:
-                        #         self.state = MOVING
-                        #         return 
+                        if abs(self.gyro.val - self.starting_angle) < 10 and (self.turn_timer.millis() > TURN_MILLIS):
+                            # TODO: Might need to test this with and instead of or.
+                            self.turn_timer.reset()
 
-                        if self.angle > 10:
+                            farthest_sensor_angle = None
+                            farthest_sensor = 0
+
+                            for i in xrange(len(self.ir_readings)):
+                                if self.ir_readings[i] > farthest_sensor:
+                                    farthest_sensor = self.ir_readings[i]
+                                    farthest_sensor_angle = (i % 6) * 60
+
+                            self.starting_angle = self.gyro.val
+
+                            # Set the robot to turn to the farthest sensor angle.
+                            self.stuck_angle = farthest_sensor_angle
+
+
+                        if self.stuck_angle:
+                            desired_angle = self.stuck_angle
+                        else:
+                            desired_angle = self.angle
+
+                        if desired_angle > 10:
                             self.motor1.write(0,const)
                             self.motor2.write(0,const)
                             if self.finding and most_recent_angle:
                                 self.state = CALCULATING
                                 return
-                            if ((self.gyro.val) - self.starting_angle) > self.angle:
+                            if ((self.gyro.val) - self.starting_angle) > desired_angle:
                                 self.state = MOVING        
-                        elif self.angle < -10:
+                        elif desired_angle < -10:
                             self.motor1.write(1,const)
                             self.motor2.write(1,const)
                             if self.finding and most_recent_angle:
                                 self.state = CALCULATING
                                 return
-                            if ((self.gyro.val) - self.starting_angle) < self.angle:
+                            if ((self.gyro.val) - self.starting_angle) < desired_angle:
                                 self.state = MOVING
                         else:
                             self.state = MOVING
@@ -217,19 +239,23 @@ class Movement (SyncedSketch):
 
                 # print "moving"
                 #move the robot forward for a second - THIS DOESN'T QUITE WORK YET
-                self.motor1.write(0,40)
-                self.motor2.write(1,40) 
+                if (self.ir_readings[0] > THRESHOLD and self.ir_readings[6] > THRESHOLD)
+                    self.motor1.write(0,40)
+                    self.motor2.write(1,40) 
 
-                if self.gyro_timer.millis() > 1000:
-                    self.gyro_timer.reset()
-                    self.state = CALCULATING
+                # Move forward until the front IR sensor gets stuck.
+
+
+                # if self.gyro_timer.millis() > 1000:
+                #     self.gyro_timer.reset()
+                #     self.state = CALCULATING
         
 
     def bitchslap(self):
         base = 80
         if self.found_block:
             sign = 1-2*self.detected_color
-            if (sign*(self.encoder6.val - self.encoder_initial) < 2400):
+            if (sign*(self.encoder6.val - self.encoder_initial) < 2000):
                 print sign*(self.encoder6.val - self.encoder_initial)
                 # if stuck for a while, back up a little
                 if self.encoder6.val - self.last_angle == 0 and not self.encoder6.val == self.encoder_initial:

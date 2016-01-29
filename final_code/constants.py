@@ -76,4 +76,10 @@ BLOB_SCALE_FACTOR = 500.0
 RED_THRESH = 1.4
 GREEN_THRESH = 1.2
 
+################OTHER###################
+TURN_MILLIS = 10000
+TURN_SPEED = 26
+
+
+
 
